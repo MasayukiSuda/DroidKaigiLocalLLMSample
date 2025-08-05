@@ -1,6 +1,7 @@
 package com.daasuu.llmsample.di
 
 import com.daasuu.llmsample.data.llm.llamacpp.LlamaCppRepository
+import com.daasuu.llmsample.data.llm.litert.LiteRTRepository
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.Module
@@ -35,12 +36,21 @@ object LLMModule {
     
     @Provides
     @Singleton
+    @LiteRTRepo
+    fun provideLiteRTRepository(
+        repository: LiteRTRepository
+    ): LLMRepository = repository
+    
+    @Provides
+    @Singleton
     fun provideLLMRepositories(
-        @LlamaCppRepo llamaCppRepo: LLMRepository
+        @LlamaCppRepo llamaCppRepo: LLMRepository,
+        @LiteRTRepo liteRTRepo: LLMRepository
     ): Map<LLMProvider, LLMRepository> {
         return mapOf(
-            LLMProvider.LLAMA_CPP to llamaCppRepo
-            // TODO: Add other providers
+            LLMProvider.LLAMA_CPP to llamaCppRepo,
+            LLMProvider.LITE_RT to liteRTRepo
+            // TODO: Add Gemini Nano
         )
     }
 }
