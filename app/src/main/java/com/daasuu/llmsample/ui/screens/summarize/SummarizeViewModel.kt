@@ -2,6 +2,7 @@ package com.daasuu.llmsample.ui.screens.summarize
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -12,7 +13,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class SummarizeViewModel @Inject constructor() : ViewModel() {
+class SummarizeViewModel @Inject constructor(
+    private val llmManager: LLMManager
+) : ViewModel() {
     
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
@@ -52,12 +55,22 @@ class SummarizeViewModel @Inject constructor() : ViewModel() {
         
         _isLoading.value = true
         
-        // TODO: Call selected LLM for summarization
-        // For now, just return a simple summary
-        delay(1000) // Simulate processing
-        _summaryText.value = "要約: ${_inputText.value.take(100)}..."
-        
-        _isLoading.value = false
+        try {
+            val summaryFlow = llmManager.summarizeText(_inputText.value)
+            if (summaryFlow != null) {
+                val summaryBuilder = StringBuilder()
+                summaryFlow.collect { token ->
+                    summaryBuilder.append(token)
+                    _summaryText.value = summaryBuilder.toString()
+                }
+            } else {
+                _summaryText.value = "Error: LLM not available"
+            }
+        } catch (e: Exception) {
+            _summaryText.value = "Error: ${e.message}"
+        } finally {
+            _isLoading.value = false
+        }
     }
     
     fun clearAll() {
