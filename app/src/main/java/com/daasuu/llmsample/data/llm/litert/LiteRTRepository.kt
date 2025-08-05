@@ -58,13 +58,16 @@ class LiteRTRepository @Inject constructor(
                     // Try GPU delegate first
                     val compatList = CompatibilityList()
                     if (compatList.isDelegateSupportedOnThisDevice) {
-                        val delegateOptions = compatList.bestOptionsForThisDevice
-                        val gpuDelegate = GpuDelegate(delegateOptions)
+                        val gpuDelegate = GpuDelegate()
                         options.addDelegate(gpuDelegate)
                     } else {
                         // Fallback to NNAPI
-                        val nnApiDelegate = NnApiDelegate()
-                        options.addDelegate(nnApiDelegate)
+                        try {
+                            val nnApiDelegate = NnApiDelegate()
+                            options.addDelegate(nnApiDelegate)
+                        } catch (e: Exception) {
+                            // NNAPI not available, use CPU
+                        }
                     }
                     
                     options.setNumThreads(4)
