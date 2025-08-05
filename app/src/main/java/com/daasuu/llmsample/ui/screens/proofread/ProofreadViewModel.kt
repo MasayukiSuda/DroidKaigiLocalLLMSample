@@ -2,6 +2,7 @@ package com.daasuu.llmsample.ui.screens.proofread
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -19,7 +20,9 @@ data class ProofreadCorrection(
 )
 
 @HiltViewModel
-class ProofreadViewModel @Inject constructor() : ViewModel() {
+class ProofreadViewModel @Inject constructor(
+    private val llmManager: LLMManager
+) : ViewModel() {
     
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
@@ -59,19 +62,31 @@ class ProofreadViewModel @Inject constructor() : ViewModel() {
         
         _isLoading.value = true
         
-        // TODO: Call selected LLM for proofreading
-        // For now, return mock corrections
-        delay(1500) // Simulate processing
-        
-        _corrections.value = listOf(
-            ProofreadCorrection(
-                original = "テキスト",
-                suggested = "文章",
-                type = "表現",
-                explanation = "より自然な表現です"
-            )
-        )
-        
-        _isLoading.value = false
+        try {
+            val proofreadFlow = llmManager.proofreadText(_inputText.value)
+            if (proofreadFlow != null) {
+                val resultBuilder = StringBuilder()
+                proofreadFlow.collect { token ->
+                    resultBuilder.append(token)
+                }
+                
+                // Parse the result to extract corrections
+                // For now, create mock corrections
+                _corrections.value = listOf(
+                    ProofreadCorrection(
+                        original = "テキスト",
+                        suggested = "文章",
+                        type = "表現",
+                        explanation = "より自然な表現です"
+                    )
+                )
+            } else {
+                _corrections.value = emptyList()
+            }
+        } catch (e: Exception) {
+            _corrections.value = emptyList()
+        } finally {
+            _isLoading.value = false
+        }
     }
 }
