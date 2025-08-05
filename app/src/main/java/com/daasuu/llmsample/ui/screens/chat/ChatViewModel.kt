@@ -3,6 +3,8 @@ package com.daasuu.llmsample.ui.screens.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.ChatMessage
+import com.daasuu.llmsample.data.model.LLMProvider
+import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +13,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ChatViewModel @Inject constructor() : ViewModel() {
+class ChatViewModel @Inject constructor(
+    private val llmManager: LLMManager
+) : ViewModel() {
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -24,6 +28,13 @@ class ChatViewModel @Inject constructor() : ViewModel() {
     
     fun updateInputText(text: String) {
         _inputText.value = text
+    }
+    
+    init {
+        viewModelScope.launch {
+            // Initialize with Llama.cpp
+            llmManager.initialize(LLMProvider.LLAMA_CPP)
+        }
     }
     
     fun sendMessage() {
@@ -40,14 +51,48 @@ class ChatViewModel @Inject constructor() : ViewModel() {
             _inputText.value = ""
             _isLoading.value = true
             
-            // TODO: Generate response from selected LLM
-            // For now, just echo back
-            val responseMessage = ChatMessage(
-                content = "Echo: $text",
-                isUser = false
-            )
-            _messages.value = _messages.value + responseMessage
-            _isLoading.value = false
+            try {
+                // Generate response from selected LLM
+                val responseFlow = llmManager.generateChatResponse(text)
+                if (responseFlow != null) {
+                    val responseBuilder = StringBuilder()
+                    responseFlow.collect { token ->
+                        responseBuilder.append(token)
+                        // Update the last message with accumulated response
+                        val currentMessages = _messages.value.toMutableList()
+                        if (currentMessages.isNotEmpty() && !currentMessages.last().isUser) {
+                            // Update existing response message
+                            currentMessages[currentMessages.size - 1] = currentMessages.last().copy(
+                                content = responseBuilder.toString()
+                            )
+                        } else {
+                            // Add new response message
+                            currentMessages.add(
+                                ChatMessage(
+                                    content = responseBuilder.toString(),
+                                    isUser = false
+                                )
+                            )
+                        }
+                        _messages.value = currentMessages
+                    }
+                } else {
+                    // Fallback response
+                    val responseMessage = ChatMessage(
+                        content = "Error: LLM not available",
+                        isUser = false
+                    )
+                    _messages.value = _messages.value + responseMessage
+                }
+            } catch (e: Exception) {
+                val errorMessage = ChatMessage(
+                    content = "Error: ${e.message}",
+                    isUser = false
+                )
+                _messages.value = _messages.value + errorMessage
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 }
