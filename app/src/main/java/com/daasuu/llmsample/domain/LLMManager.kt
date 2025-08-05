@@ -1,8 +1,6 @@
 package com.daasuu.llmsample.domain
 
-import com.daasuu.llmsample.data.model.BenchmarkResult
 import com.daasuu.llmsample.data.model.LLMProvider
-import com.daasuu.llmsample.data.model.TaskType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,44 +35,47 @@ class LLMManager @Inject constructor(
         initialize(provider)
     }
     
-    suspend fun generateChatResponse(prompt: String): Flow<String>? {
-        return getCurrentRepository()?.generateChatResponse(prompt)
+    suspend fun generateChatResponse(prompt: String): Flow<String> {
+        return getCurrentRepository()?.generateChatResponse(prompt) 
+            ?: throw IllegalStateException("No repository available for current provider")
     }
     
-    suspend fun summarizeText(text: String): Flow<String>? {
+    suspend fun summarizeText(text: String): Flow<String> {
         return getCurrentRepository()?.summarizeText(text)
+            ?: throw IllegalStateException("No repository available for current provider")
     }
     
-    suspend fun proofreadText(text: String): Flow<String>? {
+    suspend fun proofreadText(text: String): Flow<String> {
         return getCurrentRepository()?.proofreadText(text)
+            ?: throw IllegalStateException("No repository available for current provider")
     }
     
-    suspend fun getBenchmarkResult(taskType: TaskType, input: String): BenchmarkResult? {
-        return getCurrentRepository()?.getBenchmarkResult(taskType, input)
-    }
-    
-    suspend fun getAllBenchmarkResults(taskType: TaskType, input: String): List<BenchmarkResult> {
-        val results = mutableListOf<BenchmarkResult>()
-        
-        repositories.forEach { (provider, repo) ->
-            try {
-                if (!repo.isAvailable()) {
-                    repo.initialize()
-                }
-                if (repo.isAvailable()) {
-                    val result = repo.getBenchmarkResult(taskType, input)
-                    results.add(result)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        
-        return results
-    }
     
     fun getAvailableProviders(): List<LLMProvider> {
         return repositories.keys.toList()
+    }
+    
+    suspend fun setCurrentProvider(provider: LLMProvider) {
+        if (_currentProvider.value != provider) {
+            switchProvider(provider)
+        }
+    }
+    
+    fun getCurrentModelName(): String? {
+        return getCurrentRepository()?.let { repo ->
+            "${_currentProvider.value.displayName} Model"
+        }
+    }
+    
+    fun getCurrentModelSize(): Float {
+        return getCurrentRepository()?.let { repo ->
+            // モデルサイズを取得（実装は各リポジトリに依存）
+            when (_currentProvider.value) {
+                LLMProvider.LLAMA_CPP -> 640f // TinyLlama approximate size
+                LLMProvider.LITE_RT -> 512f // TensorFlow Lite model size
+                LLMProvider.GEMINI_NANO -> 0f // On-device, no separate download
+            }
+        } ?: 0f
     }
     
     private fun getCurrentRepository(): LLMRepository? {

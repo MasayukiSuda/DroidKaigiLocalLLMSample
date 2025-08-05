@@ -22,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.daasuu.llmsample.ui.navigation.AppNavigation
 import com.daasuu.llmsample.ui.navigation.BottomNavItem
 import com.daasuu.llmsample.ui.screens.settings.SettingsScreen
+import com.daasuu.llmsample.ui.screens.benchmark.BenchmarkDashboardScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,14 +34,17 @@ fun MainScreen() {
         BottomNavItem.Proofread
     )
     
+    // We'll inject the BenchmarkReportExporter in the BenchmarkDashboardScreen instead
+    
     var showSettings by remember { mutableStateOf(false) }
+    var showBenchmark by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("DroidKaigi LLM Sample") },
                 actions = {
-                    IconButton(onClick = { /* TODO: Navigate to benchmark */ }) {
+                    IconButton(onClick = { showBenchmark = true }) {
                         Icon(Icons.Default.Speed, contentDescription = "ベンチマーク")
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -97,7 +101,16 @@ fun MainScreen() {
                     Text("閉じる")
                 }
             },
-modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         )
+    }
+    
+    // Benchmark dashboard modal
+    if (showBenchmark) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            BenchmarkDashboardScreen(
+                onBack = { showBenchmark = false }
+            )
+        }
     }
 }

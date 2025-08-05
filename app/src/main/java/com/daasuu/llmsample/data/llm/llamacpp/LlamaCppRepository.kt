@@ -1,9 +1,7 @@
 package com.daasuu.llmsample.data.llm.llamacpp
 
 import android.content.Context
-import com.daasuu.llmsample.data.model.BenchmarkResult
 import com.daasuu.llmsample.data.model.LLMProvider
-import com.daasuu.llmsample.data.model.TaskType
 import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -140,29 +138,7 @@ class LlamaCppRepository @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
     
-    override suspend fun getBenchmarkResult(taskType: TaskType, input: String): BenchmarkResult {
-        val memoryBefore = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
-        
-        val totalTime = measureTimeMillis {
-            when (taskType) {
-                TaskType.CHAT -> generateChatResponse(input).collect {}
-                TaskType.SUMMARIZATION -> summarizeText(input).collect {}
-                TaskType.PROOFREADING -> proofreadText(input).collect {}
-            }
-        }
-        
-        val memoryAfter = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()
-        val memoryUsedMb = (memoryAfter - memoryBefore) / (1024f * 1024f)
-        
-        return BenchmarkResult(
-            provider = LLMProvider.LLAMA_CPP,
-            taskType = taskType,
-            firstTokenLatencyMs = firstTokenTime,
-            totalLatencyMs = totalTime,
-            memoryUsageMb = memoryUsedMb,
-            modelSizeMb = if (modelPtr != 0L) LlamaCppJNI.getModelSizeMB(modelPtr) else 0f
-        )
-    }
+
     
     private suspend fun generateResponse(prompt: String, onToken: suspend (String) -> Unit) {
         firstTokenTime = 0L
