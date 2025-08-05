@@ -2,7 +2,12 @@ package com.daasuu.llmsample.ui.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
@@ -16,6 +21,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.daasuu.llmsample.ui.navigation.AppNavigation
 import com.daasuu.llmsample.ui.navigation.BottomNavItem
+import com.daasuu.llmsample.ui.screens.settings.SettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +32,8 @@ fun MainScreen() {
         BottomNavItem.Summarize,
         BottomNavItem.Proofread
     )
+    
+    var showSettings by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -35,7 +43,7 @@ fun MainScreen() {
                     IconButton(onClick = { /* TODO: Navigate to benchmark */ }) {
                         Icon(Icons.Default.Speed, contentDescription = "ベンチマーク")
                     }
-                    IconButton(onClick = { /* TODO: Navigate to settings */ }) {
+                    IconButton(onClick = { showSettings = true }) {
                         Icon(Icons.Default.Settings, contentDescription = "設定")
                     }
                 }
@@ -72,5 +80,24 @@ fun MainScreen() {
         ) {
             AppNavigation(navController = navController)
         }
+    }
+    
+    // Settings modal
+    if (showSettings) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showSettings = false },
+            title = {
+                Text("設定")
+            },
+            text = {
+                SettingsScreen()
+            },
+            confirmButton = {
+                TextButton(onClick = { showSettings = false }) {
+                    Text("閉じる")
+                }
+            },
+modifier = Modifier.fillMaxWidth()
+        )
     }
 }

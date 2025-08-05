@@ -1,5 +1,6 @@
 package com.daasuu.llmsample.di
 
+import com.daasuu.llmsample.data.llm.gemini.GeminiNanoRepository
 import com.daasuu.llmsample.data.llm.llamacpp.LlamaCppRepository
 import com.daasuu.llmsample.data.llm.litert.LiteRTRepository
 import com.daasuu.llmsample.data.model.LLMProvider
@@ -43,14 +44,22 @@ object LLMModule {
     
     @Provides
     @Singleton
+    @GeminiNanoRepo
+    fun provideGeminiNanoRepository(
+        repository: GeminiNanoRepository
+    ): LLMRepository = repository
+    
+    @Provides
+    @Singleton
     fun provideLLMRepositories(
         @LlamaCppRepo llamaCppRepo: LLMRepository,
-        @LiteRTRepo liteRTRepo: LLMRepository
+        @LiteRTRepo liteRTRepo: LLMRepository,
+        @GeminiNanoRepo geminiNanoRepo: LLMRepository
     ): Map<LLMProvider, LLMRepository> {
         return mapOf(
             LLMProvider.LLAMA_CPP to llamaCppRepo,
-            LLMProvider.LITE_RT to liteRTRepo
-            // TODO: Add Gemini Nano
+            LLMProvider.LITE_RT to liteRTRepo,
+            LLMProvider.GEMINI_NANO to geminiNanoRepo
         )
     }
 }

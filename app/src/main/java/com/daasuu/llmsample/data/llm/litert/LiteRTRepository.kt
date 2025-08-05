@@ -4,6 +4,7 @@ import android.content.Context
 import com.daasuu.llmsample.data.model.BenchmarkResult
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.TaskType
+import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,8 @@ import kotlin.system.measureTimeMillis
 
 @Singleton
 class LiteRTRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelManager: ModelManager
 ) : LLMRepository {
     
     private var interpreter: Interpreter? = null
@@ -44,11 +46,15 @@ class LiteRTRepository @Inject constructor(
         
         withContext(Dispatchers.IO) {
             try {
-                // For demo purposes, create a mock model
-                // In production, you would load an actual TFLite model
-                val modelFile = File(context.filesDir, "llm_model.tflite")
+                // Try to find downloaded models for LiteRT
+                val downloadedModels = modelManager.getModelsByProvider(LLMProvider.LITE_RT)
+                    .filter { it.isDownloaded }
                 
-                if (modelFile.exists()) {
+                if (downloadedModels.isNotEmpty()) {
+                    // Use the first available model
+                    val modelPath = downloadedModels.first().localPath!!
+                    val modelFile = File(modelPath)
+                    
                     val model = loadModelFile(modelFile)
                     modelSize = modelFile.length() / (1024f * 1024f)
                     
@@ -73,12 +79,12 @@ class LiteRTRepository @Inject constructor(
                     options.setNumThreads(4)
                     interpreter = Interpreter(model, options)
                     
-                    // Initialize vocabulary (mock)
+                    // Initialize vocabulary
                     initializeVocabulary()
                     
                     isInitialized = true
                 } else {
-                    // Mock initialization for demo
+                    // No models downloaded, initialize with mock for demo
                     isInitialized = true
                     modelSize = 512f // Mock 512MB model
                     initializeVocabulary()

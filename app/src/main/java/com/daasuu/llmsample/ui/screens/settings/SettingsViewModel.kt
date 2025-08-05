@@ -1,0 +1,73 @@
+package com.daasuu.llmsample.ui.screens.settings
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.daasuu.llmsample.data.model.LLMProvider
+import com.daasuu.llmsample.data.model.ModelInfo
+import com.daasuu.llmsample.data.model_manager.ModelManager
+import com.daasuu.llmsample.domain.LLMManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val modelManager: ModelManager,
+    private val llmManager: LLMManager
+) : ViewModel() {
+    
+    private val _models = MutableStateFlow<List<ModelInfo>>(emptyList())
+    val models: StateFlow<List<ModelInfo>> = _models.asStateFlow()
+    
+    private val _selectedProvider = MutableStateFlow(LLMProvider.LLAMA_CPP)
+    val selectedProvider: StateFlow<LLMProvider> = _selectedProvider.asStateFlow()
+    
+    val downloadProgress = modelManager.downloadProgress
+    
+    init {
+        refreshModels()
+        viewModelScope.launch {
+            llmManager.currentProvider.collect { provider ->
+                _selectedProvider.value = provider
+            }
+        }
+    }
+    
+    fun refreshModels() {
+        _models.value = modelManager.getAvailableModels()
+    }
+    
+    fun selectProvider(provider: LLMProvider) {
+        viewModelScope.launch {
+            llmManager.switchProvider(provider)
+            _selectedProvider.value = provider
+        }
+    }
+    
+    fun downloadModel(modelId: String) {
+        viewModelScope.launch {
+            val result = modelManager.downloadModel(modelId)
+            result.onSuccess {
+                refreshModels()
+            }.onFailure { exception ->
+                // Handle download failure - could show snackbar or dialog
+                exception.printStackTrace()
+            }
+        }
+    }
+    
+    fun deleteModel(modelId: String) {
+        viewModelScope.launch {
+            val result = modelManager.deleteModel(modelId)
+            result.onSuccess {
+                refreshModels()
+            }.onFailure { exception ->
+                // Handle deletion failure
+                exception.printStackTrace()
+            }
+        }
+    }
+}

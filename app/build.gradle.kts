@@ -54,7 +54,7 @@ android {
     // externalNativeBuild {
     //     cmake {
     //         path = file("src/main/cpp/CMakeLists.txt")
-    //         version = "3.18.1"
+    //         version = "3.22.1"
     //     }
     // }
 }
@@ -87,13 +87,17 @@ dependencies {
     // Material Icons Extended
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
     
+    // HTTP Client for model downloads
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
     // TensorFlow Lite
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     
-    // ML Kit GenAI API (Gemini Nano)
-    implementation("com.google.mlkit:generative-ai:16.0.0-beta05")
+    // ML Kit GenAI API (Gemini Nano) - Mock implementation for now
+    // implementation("com.google.mlkit:generative-ai:16.0.0-beta05")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

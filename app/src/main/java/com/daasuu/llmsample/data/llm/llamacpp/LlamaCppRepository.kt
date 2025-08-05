@@ -4,6 +4,7 @@ import android.content.Context
 import com.daasuu.llmsample.data.model.BenchmarkResult
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.TaskType
+import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +19,8 @@ import kotlin.system.measureTimeMillis
 
 @Singleton
 class LlamaCppRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelManager: ModelManager
 ) : LLMRepository {
     
     private var modelPtr: Long = 0L
@@ -30,17 +32,29 @@ class LlamaCppRepository @Inject constructor(
         
         withContext(Dispatchers.IO) {
             try {
-                // For demo purposes, always initialize successfully
-                // In production, check for actual model file
-                val modelFile = File(context.filesDir, "llama-model.gguf")
+                // Try to find downloaded models for llama.cpp
+                val downloadedModels = modelManager.getModelsByProvider(LLMProvider.LLAMA_CPP)
+                    .filter { it.isDownloaded }
                 
-                // Load model (will use mock if JNI not available)
-                modelPtr = LlamaCppJNI.loadModel(
-                    modelPath = if (modelFile.exists()) modelFile.absolutePath else "mock-model",
-                    contextSize = 2048,
-                    nGpuLayers = 0 // CPU only for now
-                )
-                isInitialized = modelPtr != 0L
+                if (downloadedModels.isNotEmpty()) {
+                    // Use the first available model
+                    val modelPath = downloadedModels.first().localPath!!
+                    
+                    modelPtr = LlamaCppJNI.loadModel(
+                        modelPath = modelPath,
+                        contextSize = 2048,
+                        nGpuLayers = 0 // CPU only for now
+                    )
+                    isInitialized = modelPtr != 0L
+                } else {
+                    // No models downloaded, initialize with mock for demo
+                    modelPtr = LlamaCppJNI.loadModel(
+                        modelPath = "mock-model",
+                        contextSize = 2048,
+                        nGpuLayers = 0
+                    )
+                    isInitialized = modelPtr != 0L
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 isInitialized = false
