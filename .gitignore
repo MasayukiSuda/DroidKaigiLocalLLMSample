@@ -32,3 +32,14 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# OSX files
+.DS_Store
+
+# bundle
+.bundle/
+vendor/
+.idea/inspectionProfiles/Project_Default.xml
+
+# Kotlin >= 2.0
+.kotlin/
