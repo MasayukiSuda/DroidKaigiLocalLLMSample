@@ -27,8 +27,6 @@ class ModelManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     
-    private val _downloadProgress = MutableStateFlow<Map<String, DownloadProgress>>(emptyMap())
-    
     // 利用可能なモデルの定義
     private val availableModels = listOf(
         ModelInfo(
@@ -79,37 +77,6 @@ class ModelManager @Inject constructor(
         return getAvailableModels().filter { it.provider == provider }
     }
     
-    fun getDownloadedModels(): List<ModelInfo> {
-        return getAvailableModels().filter { it.isDownloaded }
-    }
-    
-    suspend fun downloadModel(modelId: String): Result<String> = withContext(Dispatchers.IO) {
-        val model = availableModels.find { it.id == modelId }
-            ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
-        
-        val localFile = getModelFile(model)
-        if (localFile.exists()) {
-            return@withContext Result.success(localFile.absolutePath)
-        }
-        
-        // ダウンロード機能を無効化 - ローカルファイルの配置を案内
-        updateDownloadProgress(modelId, DownloadStatus.FAILED, error = "自動ダウンロードは無効化されています。モデルファイルを手動で配置してください。")
-        
-        val expectedPath = localFile.absolutePath
-        val instructions = """
-            モデルファイルが見つかりません。
-            
-            以下の手順でモデルを配置してください：
-            1. モデルファイルをダウンロード
-            2. 次のパスに配置: $expectedPath
-            3. アプリを再起動
-            
-            詳細はプロジェクトのREADMEを参照してください。
-        """.trimIndent()
-        
-        return@withContext Result.failure(IOException(instructions))
-    }
-    
     suspend fun deleteModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
         val model = availableModels.find { it.id == modelId }
             ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
@@ -124,12 +91,6 @@ class ModelManager @Inject constructor(
         } else {
             Result.success(Unit)
         }
-    }
-    
-    fun getModelPath(modelId: String): String? {
-        val model = availableModels.find { it.id == modelId } ?: return null
-        val localFile = getModelFile(model)
-        return if (localFile.exists()) localFile.absolutePath else null
     }
     
     private fun getModelFile(model: ModelInfo): File {
@@ -199,25 +160,5 @@ class ModelManager @Inject constructor(
         } catch (e: Exception) {
             // Assetsにモデルがない場合は無視
         }
-    }
-    
-    private fun updateDownloadProgress(
-        modelId: String,
-        status: DownloadStatus,
-        progress: Float = 0f,
-        downloadedBytes: Long = 0L,
-        totalBytes: Long = 0L,
-        error: String? = null
-    ) {
-        val currentProgress = _downloadProgress.value.toMutableMap()
-        currentProgress[modelId] = DownloadProgress(
-            modelId = modelId,
-            status = status,
-            progress = progress,
-            downloadedBytes = downloadedBytes,
-            totalBytes = totalBytes,
-            error = error
-        )
-        _downloadProgress.value = currentProgress
     }
 }

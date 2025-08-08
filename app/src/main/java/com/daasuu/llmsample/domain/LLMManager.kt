@@ -50,11 +50,6 @@ class LLMManager @Inject constructor(
             ?: throw IllegalStateException("No repository available for current provider")
     }
     
-    
-    fun getAvailableProviders(): List<LLMProvider> {
-        return repositories.keys.toList()
-    }
-    
     suspend fun setCurrentProvider(provider: LLMProvider) {
         if (_currentProvider.value != provider) {
             switchProvider(provider)
