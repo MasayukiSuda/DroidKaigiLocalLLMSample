@@ -1,12 +1,14 @@
 package com.daasuu.llmsample.ui.screens.settings
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +26,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val models by viewModel.models.collectAsState()
-    val downloadProgress by viewModel.downloadProgress.collectAsState()
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     
     Column(
@@ -36,8 +37,44 @@ fun SettingsScreen(
             text = "モデル管理",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
+        
+        // モデル配置の説明
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    Icons.Default.FolderOpen,
+                    contentDescription = "フォルダ",
+                    modifier = Modifier.padding(end = 12.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Column {
+                    Text(
+                        text = "モデルファイルの配置",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "モデルファイルを手動でダウンロードし、app/src/main/assets/models/ に配置してください。詳細はREADMEを参照してください。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
         
         // Provider selection
         Card(
@@ -54,7 +91,7 @@ fun SettingsScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 
-                LLMProvider.values().forEach { provider ->
+                LLMProvider.entries.forEach { provider ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -79,8 +116,6 @@ fun SettingsScreen(
             items(models) { model ->
                 ModelCard(
                     model = model,
-                    downloadProgress = downloadProgress[model.id],
-                    onDownload = { viewModel.downloadModel(model.id) },
                     onDelete = { viewModel.deleteModel(model.id) }
                 )
             }
@@ -91,8 +126,6 @@ fun SettingsScreen(
 @Composable
 fun ModelCard(
     model: ModelInfo,
-    downloadProgress: com.daasuu.llmsample.data.model.DownloadProgress?,
-    onDownload: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -133,49 +166,71 @@ fun ModelCard(
                 }
                 
                 when {
-                    downloadProgress?.status == DownloadStatus.DOWNLOADING -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(
-                                progress = { downloadProgress.progress },
-                                modifier = Modifier.size(40.dp),
-                                strokeWidth = 3.dp
-                            )
-                            Text(
-                                text = "${(downloadProgress.progress * 100).toInt()}%",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-                    }
                     model.isDownloaded -> {
-                        IconButton(onClick = onDelete) {
+                        Row {
                             Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "削除",
-                                tint = MaterialTheme.colorScheme.error
+                                Icons.Default.CheckCircle,
+                                contentDescription = "利用可能",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(onClick = onDelete) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "削除",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                     else -> {
-                        IconButton(onClick = onDownload) {
-                            Icon(
-                                Icons.Default.CloudDownload,
-                                contentDescription = "ダウンロード"
-                            )
-                        }
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = "未配置",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
             
-            if (downloadProgress?.status == DownloadStatus.FAILED) {
-                Text(
-                    text = "エラー: ${downloadProgress.error}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+            when {
+                model.isDownloaded -> {
+                    Text(
+                        text = "✓ モデルファイルが配置されています",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                else -> {
+                    Column(
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(
+                            text = "モデルファイルが見つかりません",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = "期待される配置先:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        Text(
+                            text = when (model.provider) {
+                                LLMProvider.LLAMA_CPP -> "app/src/main/assets/models/llama_cpp/${model.id}.bin"
+                                LLMProvider.LITE_RT -> "app/src/main/assets/models/lite_rt/${model.id}.tflite"
+                                else -> "N/A"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                    }
+                }
             }
         }
     }

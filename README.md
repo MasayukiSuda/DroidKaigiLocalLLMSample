@@ -1,7 +1,45 @@
 # DroidKaigi Local LLM Sample
 
+## モデルファイルの配置方法
 
-Session Proposal
+このアプリでは、LLMモデルファイルを手動で配置する必要があります。
+
+### 必要なモデルファイル
+
+以下のモデルファイルをダウンロードして、指定されたディレクトリに配置してください：
+
+1. **TinyLlama 1.1B Q4** (推奨 - 軽量モデル)
+   - ダウンロード: [tinyllama-1.1b-chat-v1.0.q4_0.bin](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGML/resolve/main/tinyllama-1.1b-chat-v1.0.q4_0.bin)
+   - サイズ: 約640MB
+   - 配置先: `app/src/main/assets/models/llama_cpp/tinyllama-1.1b-q4.bin`
+
+2. **Llama 2 7B Chat Q4** (大容量モデル)
+   - ダウンロード: [llama-2-7b-chat.q4_0.bin](https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/llama-2-7b-chat.q4_0.bin)
+   - サイズ: 約3.8GB
+   - 配置先: `app/src/main/assets/models/llama_cpp/llama2-7b-chat-q4.bin`
+
+3. **Phi-2 Q4**
+   - ダウンロード: [phi-2-q4_0.bin](https://huggingface.co/microsoft/phi-2-ggml/resolve/main/phi-2-q4_0.bin)
+   - サイズ: 約1.5GB
+   - 配置先: `app/src/main/assets/models/llama_cpp/phi-2-q4.bin`
+
+### 配置手順
+
+1. 上記のリンクからモデルファイルをダウンロード
+2. プロジェクトの `app/src/main/assets/models/` ディレクトリを作成（存在しない場合）
+3. プロバイダーごとのサブディレクトリを作成：
+   - `app/src/main/assets/models/llama_cpp/` (llama.cpp用)
+   - `app/src/main/assets/models/lite_rt/` (LiteRT用)
+4. ダウンロードしたファイルを対応するディレクトリに配置
+5. アプリをビルド・実行
+
+### 注意事項
+
+- モデルファイルは大容量のため、Git LFSの使用を推奨します
+- 初回起動時、アプリはassetsからアプリの内部ストレージにモデルをコピーします
+- ストレージ容量に注意してください（TinyLlamaで約640MB、Llama 2で約3.8GB必要）
+
+## Session Proposal
 ```
 生成AIはクラウドだけのものではありません。Android 16 以降では AICore 上の Gemini Nano を ML Kit GenAI API 経由で呼び出せ、数百ms で要約・校正・画像キャプションを端末内で完結できます。一方 OSS 界隈では ggml／llama.cpp による量子化 Llama 3 などを JNI 経由で組み込む手法や、汎用ランタイム LiteRT（旧 TensorFlowLite） にモデルを変換し NNAPI／GPU で推論するルートも整備されました。
 

@@ -25,9 +25,13 @@ class SettingsViewModel @Inject constructor(
     private val _selectedProvider = MutableStateFlow(LLMProvider.LLAMA_CPP)
     val selectedProvider: StateFlow<LLMProvider> = _selectedProvider.asStateFlow()
     
-    val downloadProgress = modelManager.downloadProgress
-    
     init {
+        // 起動時にassetsからモデルをコピー
+        viewModelScope.launch {
+            modelManager.copyModelsFromAssets()
+            refreshModels()
+        }
+        
         refreshModels()
         viewModelScope.launch {
             llmManager.currentProvider.collect { provider ->
@@ -44,18 +48,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             llmManager.switchProvider(provider)
             _selectedProvider.value = provider
-        }
-    }
-    
-    fun downloadModel(modelId: String) {
-        viewModelScope.launch {
-            val result = modelManager.downloadModel(modelId)
-            result.onSuccess {
-                refreshModels()
-            }.onFailure { exception ->
-                // Handle download failure - could show snackbar or dialog
-                exception.printStackTrace()
-            }
         }
     }
     
