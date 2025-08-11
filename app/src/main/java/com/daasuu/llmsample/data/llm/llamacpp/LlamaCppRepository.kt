@@ -9,6 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -35,28 +37,69 @@ class LlamaCppRepository @Inject constructor(
                     .filter { it.isDownloaded }
                 
                 if (downloadedModels.isNotEmpty()) {
-                    // Use the first available model
-                    val modelPath = downloadedModels.first().localPath!!
+                    for (modelInfo in downloadedModels) {
+                        val modelPath = modelInfo.localPath!!
+                        
+                        // Check if model file actually exists and is readable
+                        val modelFile = java.io.File(modelPath)
+                        if (!modelFile.exists()) {
+                            println("Model file does not exist: $modelPath")
+                            continue
+                        }
+                        if (!modelFile.canRead()) {
+                            println("Cannot read model file: $modelPath")
+                            continue
+                        }
+                        if (modelFile.length() == 0L) {
+                            println("Model file is empty: $modelPath")
+                            continue
+                        }
+                        
+                        println("Attempting to initialize LlamaCpp with model: $modelPath (${modelFile.length()} bytes)")
+                        
+                        modelPtr = LlamaCppJNI.loadModel(
+                            modelPath = modelPath,
+                            contextSize = 2048,
+                            nGpuLayers = 0 // CPU only for now
+                        )
+                        
+                        if (modelPtr != 0L) {
+                            isInitialized = true
+                            println("LlamaCpp model loaded successfully with pointer: $modelPtr")
+                            return@withContext
+                        } else {
+                            println("Failed to load model: $modelPath")
+                        }
+                    }
                     
-                    modelPtr = LlamaCppJNI.loadModel(
-                        modelPath = modelPath,
-                        contextSize = 2048,
-                        nGpuLayers = 0 // CPU only for now
-                    )
-                    isInitialized = modelPtr != 0L
+                    // If we get here, no models worked
+                    println("All downloaded models failed to load, falling back to mock")
+                    fallbackToMock()
                 } else {
-                    // No models downloaded, initialize with mock for demo
-                    modelPtr = LlamaCppJNI.loadModel(
-                        modelPath = "mock-model",
-                        contextSize = 2048,
-                        nGpuLayers = 0
-                    )
-                    isInitialized = modelPtr != 0L
+                    println("No downloaded models found, using mock implementation")
+                    fallbackToMock()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                isInitialized = false
+                println("Exception during LlamaCpp initialization: ${e.message}")
+                fallbackToMock()
             }
+        }
+    }
+    
+    private fun fallbackToMock() {
+        try {
+            modelPtr = LlamaCppJNI.loadModel(
+                modelPath = "mock-model",
+                contextSize = 2048,
+                nGpuLayers = 0
+            )
+            isInitialized = modelPtr != 0L
+            println("Mock LlamaCpp initialized: $isInitialized")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isInitialized = false
+            modelPtr = 0L
         }
     }
     
@@ -72,10 +115,10 @@ class LlamaCppRepository @Inject constructor(
     
     override suspend fun isAvailable(): Boolean = isInitialized
     
-    override suspend fun generateChatResponse(prompt: String): Flow<String> = flow {
+    override suspend fun generateChatResponse(prompt: String): Flow<String> = channelFlow {
         if (!isInitialized) {
-            emit("Error: Llama.cpp model not initialized")
-            return@flow
+            send("Error: Llama.cpp model not initialized")
+            return@channelFlow
         }
         
         val fullPrompt = buildChatPrompt(prompt)
@@ -94,10 +137,7 @@ class LlamaCppRepository @Inject constructor(
                         if (firstTokenTime == 0L) {
                             firstTokenTime = System.currentTimeMillis() - startTime
                         }
-                        // Emit token in the flow
-                        kotlinx.coroutines.runBlocking {
-                            emit(token)
-                        }
+                        trySend(token)
                     }
                     
                     override fun onComplete() {
@@ -105,38 +145,80 @@ class LlamaCppRepository @Inject constructor(
                     }
                     
                     override fun onError(error: String) {
-                        kotlinx.coroutines.runBlocking {
-                            emit("\nError: $error")
-                        }
+                        trySend(" Error: $error")
                     }
                 }
             )
         }
-    }.flowOn(Dispatchers.IO)
+    }
     
-    override suspend fun summarizeText(text: String): Flow<String> = flow {
+    override suspend fun summarizeText(text: String): Flow<String> = channelFlow {
         if (!isInitialized) {
-            emit("Error: Llama.cpp model not initialized")
-            return@flow
+            send("Error: Llama.cpp model not initialized")
+            return@channelFlow
         }
         
         val prompt = buildSummarizationPrompt(text)
-        generateResponse(prompt) { token ->
-            emit(token)
+        firstTokenTime = 0L
+        val startTime = System.currentTimeMillis()
+        
+        withContext(Dispatchers.IO) {
+            LlamaCppJNI.generate(
+                modelPtr = modelPtr,
+                prompt = prompt,
+                maxTokens = 512,
+                temperature = 0.7f,
+                topP = 0.9f,
+                callback = object : LlamaCppJNI.GenerationCallback {
+                    override fun onToken(token: String) {
+                        if (firstTokenTime == 0L) {
+                            firstTokenTime = System.currentTimeMillis() - startTime
+                        }
+                        trySend(token)
+                    }
+                    
+                    override fun onComplete() {}
+                    override fun onError(error: String) {
+                        trySend(" Error: $error")
+                    }
+                }
+            )
         }
-    }.flowOn(Dispatchers.IO)
+    }
     
-    override suspend fun proofreadText(text: String): Flow<String> = flow {
+    override suspend fun proofreadText(text: String): Flow<String> = channelFlow {
         if (!isInitialized) {
-            emit("Error: Llama.cpp model not initialized")
-            return@flow
+            send("Error: Llama.cpp model not initialized")
+            return@channelFlow
         }
         
         val prompt = buildProofreadingPrompt(text)
-        generateResponse(prompt) { token ->
-            emit(token)
+        firstTokenTime = 0L
+        val startTime = System.currentTimeMillis()
+        
+        withContext(Dispatchers.IO) {
+            LlamaCppJNI.generate(
+                modelPtr = modelPtr,
+                prompt = prompt,
+                maxTokens = 512,
+                temperature = 0.7f,
+                topP = 0.9f,
+                callback = object : LlamaCppJNI.GenerationCallback {
+                    override fun onToken(token: String) {
+                        if (firstTokenTime == 0L) {
+                            firstTokenTime = System.currentTimeMillis() - startTime
+                        }
+                        trySend(token)
+                    }
+                    
+                    override fun onComplete() {}
+                    override fun onError(error: String) {
+                        trySend(" Error: $error")
+                    }
+                }
+            )
         }
-    }.flowOn(Dispatchers.IO)
+    }
     
 
     
@@ -173,29 +255,35 @@ class LlamaCppRepository @Inject constructor(
     }
     
     private fun buildChatPrompt(userMessage: String): String {
-        return """
-            |### Human: $userMessage
-            |### Assistant: 
-        """.trimMargin()
+        // Ultra-simple prompt to avoid tokenization issues
+        val cleanMessage = userMessage.trim().take(500) // Very short limit
+        if (cleanMessage.isEmpty()) {
+            return "Hello"
+        }
+        
+        // Try the absolute simplest format first
+        return cleanMessage
     }
     
     private fun buildSummarizationPrompt(text: String): String {
-        return """
-            |以下のテキストを簡潔に要約してください:
-            |
-            |$text
-            |
-            |要約:
-        """.trimMargin()
+        // Ultra-simple prompt to avoid tokenization issues
+        val cleanText = text.trim().take(500) // Very short limit
+        if (cleanText.isEmpty()) {
+            return "Hello"
+        }
+        
+        // Try the absolute simplest format first
+        return "Summarize: $cleanText"
     }
     
     private fun buildProofreadingPrompt(text: String): String {
-        return """
-            |以下のテキストの誤字脱字や文法の誤りを指摘し、修正案を提示してください:
-            |
-            |$text
-            |
-            |校正結果:
-        """.trimMargin()
+        // Ultra-simple prompt to avoid tokenization issues
+        val cleanText = text.trim().take(500) // Very short limit
+        if (cleanText.isEmpty()) {
+            return "Hello"
+        }
+        
+        // Try the absolute simplest format first
+        return "Check: $cleanText"
     }
 }

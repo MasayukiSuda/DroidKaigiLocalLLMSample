@@ -91,6 +91,22 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_loadModelNative(
             return 0;
         }
         
+        // Verify model properties
+        LOGI("Model loaded successfully");
+        
+        // Test vocabulary access immediately after loading
+        const struct llama_vocab* test_vocab = llama_model_get_vocab(wrapper->model);
+        if (!test_vocab) {
+            LOGE("WARNING: Cannot get vocabulary from loaded model");
+        } else {
+            LOGI("Vocabulary accessible from model");
+            
+            // Test simple tokenization right after model load
+            const char* test_str = "test";
+            int test_tokens = llama_tokenize(test_vocab, test_str, strlen(test_str), nullptr, 0, true, false);
+            LOGI("Initial tokenization test result: %d tokens for 'test'", test_tokens);
+        }
+        
         // Create context
         llama_context_params ctx_params = llama_context_default_params();
         ctx_params.n_ctx = contextSize;
@@ -199,11 +215,75 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
         
         // Tokenize prompt
         const struct llama_model* model = llama_get_model(wrapper->ctx);
+        if (!model) {
+            LOGE("Model is null - failed to get model from context");
+            jstring errorStr = env->NewStringUTF("Model not loaded properly");
+            env->CallVoidMethod(callback, onErrorMethod, errorStr);
+            env->DeleteLocalRef(errorStr);
+            wrapper->is_generating = false;
+            env->ReleaseStringUTFChars(prompt, promptStr);
+            return env->NewStringUTF("Error: Model not loaded");
+        }
+        
+        // Check if prompt is valid
+        if (!promptStr || strlen(promptStr) == 0) {
+            LOGE("Empty or null prompt provided");
+            jstring errorStr = env->NewStringUTF("Empty prompt");
+            env->CallVoidMethod(callback, onErrorMethod, errorStr);
+            env->DeleteLocalRef(errorStr);
+            wrapper->is_generating = false;
+            env->ReleaseStringUTFChars(prompt, promptStr);
+            return env->NewStringUTF("Error: Empty prompt");
+        }
+        
+        // Check for valid UTF-8 encoding and reasonable length
+        size_t prompt_len = strlen(promptStr);
+        if (prompt_len > 8192) { // Reasonable limit for prompt length
+            LOGE("Prompt too long: %zu characters", prompt_len);
+            jstring errorStr = env->NewStringUTF("Prompt too long");
+            env->CallVoidMethod(callback, onErrorMethod, errorStr);
+            env->DeleteLocalRef(errorStr);
+            wrapper->is_generating = false;
+            env->ReleaseStringUTFChars(prompt, promptStr);
+            return env->NewStringUTF("Error: Prompt too long");
+        }
+        
+        LOGI("Processing prompt: length=%zu, content='%.100s%s'", 
+             prompt_len, promptStr, prompt_len > 100 ? "..." : "");
+        
+        // Get vocabulary from model first
         const struct llama_vocab* vocab = llama_model_get_vocab(model);
+        if (!vocab) {
+            LOGE("Failed to get vocabulary from model");
+            jstring errorStr = env->NewStringUTF("Vocabulary not available");
+            env->CallVoidMethod(callback, onErrorMethod, errorStr);
+            env->DeleteLocalRef(errorStr);
+            wrapper->is_generating = false;
+            env->ReleaseStringUTFChars(prompt, promptStr);
+            return env->NewStringUTF("Error: Vocabulary not available");
+        }
+        
+        LOGI("Attempting tokenization with vocabulary");
+        
+        // First, get the required buffer size
         int n_tokens = llama_tokenize(vocab, promptStr, strlen(promptStr), nullptr, 0, true, false);
+        LOGI("Tokenization attempt 1: n_tokens = %d", n_tokens);
         if (n_tokens < 0) {
-            LOGE("Failed to tokenize prompt");
-            jstring errorStr = env->NewStringUTF("Tokenization failed");
+            LOGE("Failed to tokenize prompt: %s (length: %zu)", promptStr, strlen(promptStr));
+            
+            // Try with a simple fallback prompt to test if the issue is with the content
+            const char* testPrompt = "Hello";
+            int test_tokens = llama_tokenize(vocab, testPrompt, strlen(testPrompt), nullptr, 0, true, false);
+            LOGI("Test tokenization with 'Hello': n_tokens = %d", test_tokens);
+            
+            jstring errorStr;
+            if (test_tokens < 0) {
+                LOGE("Even simple tokenization failed - model/tokenizer issue");
+                errorStr = env->NewStringUTF("Model tokenizer not working");
+            } else {
+                LOGE("Prompt content causing tokenization failure");
+                errorStr = env->NewStringUTF("Prompt content invalid");
+            }
             env->CallVoidMethod(callback, onErrorMethod, errorStr);
             env->DeleteLocalRef(errorStr);
             wrapper->is_generating = false;
@@ -211,8 +291,10 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
             return env->NewStringUTF("Error: Tokenization failed");
         }
         
+        LOGI("Tokenization successful: %d tokens", n_tokens);
         wrapper->tokens.resize(n_tokens);
-        llama_tokenize(vocab, promptStr, strlen(promptStr), wrapper->tokens.data(), n_tokens, true, false);
+        int actual_tokens = llama_tokenize(vocab, promptStr, strlen(promptStr), wrapper->tokens.data(), n_tokens, true, false);
+        LOGI("Actual tokenization result: %d tokens", actual_tokens);
         
         // Evaluate prompt
         int n_eval = 0;

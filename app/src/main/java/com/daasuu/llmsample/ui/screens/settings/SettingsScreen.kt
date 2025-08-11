@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.daasuu.llmsample.data.model.DownloadStatus
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.ModelInfo
 

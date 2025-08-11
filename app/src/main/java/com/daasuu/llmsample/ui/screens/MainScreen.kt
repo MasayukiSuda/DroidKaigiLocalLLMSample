@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ import com.daasuu.llmsample.ui.navigation.AppNavigation
 import com.daasuu.llmsample.ui.navigation.BottomNavItem
 import com.daasuu.llmsample.ui.screens.settings.SettingsScreen
 import com.daasuu.llmsample.ui.screens.benchmark.BenchmarkDashboardScreen
+import com.daasuu.llmsample.ui.screens.model_download.ModelDownloadScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,12 +40,16 @@ fun MainScreen() {
     
     var showSettings by remember { mutableStateOf(false) }
     var showBenchmark by remember { mutableStateOf(false) }
+    var showModelDownload by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("DroidKaigi LLM Sample") },
                 actions = {
+                    IconButton(onClick = { showModelDownload = true }) {
+                        Icon(Icons.Default.Download, contentDescription = "モデル管理")
+                    }
                     IconButton(onClick = { showBenchmark = true }) {
                         Icon(Icons.Default.Speed, contentDescription = "ベンチマーク")
                     }
@@ -110,6 +116,15 @@ fun MainScreen() {
         Box(modifier = Modifier.fillMaxSize()) {
             BenchmarkDashboardScreen(
                 onBack = { showBenchmark = false }
+            )
+        }
+    }
+    
+    // Model download modal
+    if (showModelDownload) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            ModelDownloadScreen(
+                onBackClick = { showModelDownload = false }
             )
         }
     }

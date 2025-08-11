@@ -1,21 +1,13 @@
 package com.daasuu.llmsample.data.model_manager
 
+import kotlinx.coroutines.flow.Flow
 import android.content.Context
 import android.content.res.AssetManager
-import com.daasuu.llmsample.data.model.DownloadProgress
-import com.daasuu.llmsample.data.model.DownloadStatus
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.ModelInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.logging.HttpLoggingInterceptor
-import java.util.concurrent.TimeUnit
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -24,42 +16,35 @@ import javax.inject.Singleton
 
 @Singleton
 class ModelManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val modelDownloader: ModelDownloader
 ) {
     
     // 利用可能なモデルの定義
     private val availableModels = listOf(
         ModelInfo(
-            id = "llama2-7b-chat-q4",
-            name = "Llama 2 7B Chat Q4",
-            provider = LLMProvider.LLAMA_CPP,
-            downloadUrl = "https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/resolve/main/llama-2-13b-chat.ggmlv3.q4_0.bin?download=true",
-            fileSize = 3825373472L, // ~3.8GB
-            description = "Llama 2 7B model quantized to 4-bit for mobile devices"
-        ),
-        ModelInfo(
             id = "tinyllama-1.1b-q4",
             name = "TinyLlama 1.1B Q4",
             provider = LLMProvider.LLAMA_CPP,
-            downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGML/resolve/main/tinyllama-1.1b-chat-v1.0.q4_0.bin",
+            downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf",
             fileSize = 669769472L, // ~640MB
             description = "Lightweight TinyLlama model for quick testing"
+        ),
+        ModelInfo(
+            id = "llama2-7b-chat-q4",
+            name = "Llama 2 7B Chat Q4",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
+            fileSize = 3825373472L, // ~3.8GB
+            description = "Llama 2 7B model quantized to 4-bit for mobile devices"
         ),
         ModelInfo(
             id = "phi-2-q4",
             name = "Phi-2 Q4",
             provider = LLMProvider.LLAMA_CPP,
-            downloadUrl = "https://huggingface.co/microsoft/phi-2-ggml/resolve/main/phi-2-q4_0.bin",
+            downloadUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
             fileSize = 1610612736L, // ~1.5GB
             description = "Microsoft Phi-2 model quantized to 4-bit"
-        ),
-        ModelInfo(
-            id = "mobilevlm-q4",
-            name = "MobileVLM Q4",
-            provider = LLMProvider.LITE_RT,
-            downloadUrl = "https://github.com/Meituan-AutoML/MobileVLM/releases/download/v1.0/mobilevlm_q4.tflite",
-            fileSize = 536870912L, // ~512MB
-            description = "Mobile-optimized Vision-Language model for TensorFlow Lite"
         )
     )
     
@@ -93,11 +78,32 @@ class ModelManager @Inject constructor(
         }
     }
     
+    suspend fun downloadModel(
+        modelId: String,
+        onProgress: (ModelDownloader.DownloadProgress) -> Unit
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val model = availableModels.find { it.id == modelId }
+            ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
+        
+        val localFile = getModelFile(model)
+        
+        // すでに存在する場合はスキップ
+        if (localFile.exists()) {
+            return@withContext Result.success(Unit)
+        }
+        
+        modelDownloader.downloadModel(
+            url = model.downloadUrl,
+            destinationFile = localFile,
+            onProgress = onProgress
+        ).map { Unit }
+    }
+    
     private fun getModelFile(model: ModelInfo): File {
         val modelsDir = File(context.filesDir, "models")
         val providerDir = File(modelsDir, model.provider.name.lowercase())
         val fileName = when (model.provider) {
-            LLMProvider.LLAMA_CPP -> "${model.id}.bin"
+            LLMProvider.LLAMA_CPP -> "${model.id}.gguf"
             LLMProvider.LITE_RT -> "${model.id}.tflite"
             LLMProvider.GEMINI_NANO -> "${model.id}.bin" // Placeholder
         }

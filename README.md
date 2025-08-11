@@ -2,42 +2,37 @@
 
 ## モデルファイルの配置方法
 
-このアプリでは、LLMモデルファイルを手動で配置する必要があります。
+このアプリでは、LLMモデルファイルをアプリ内からダウンロードできます。
 
-### 必要なモデルファイル
+### モデルのダウンロード方法
 
-以下のモデルファイルをダウンロードして、指定されたディレクトリに配置してください：
+1. アプリを起動
+2. 画面上部のダウンロードアイコン（↓）をタップして「モデル管理」画面を開く
+3. 使用したいモデルの「ダウンロード」ボタンをタップ
+4. ダウンロードが完了するまで待機（進捗バーが表示されます）
+
+### 利用可能なモデル
+
+以下のモデルがダウンロード可能です：
 
 1. **TinyLlama 1.1B Q4** (推奨 - 軽量モデル)
-   - ダウンロード: [tinyllama-1.1b-chat-v1.0.q4_0.bin](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGML/resolve/main/tinyllama-1.1b-chat-v1.0.q4_0.bin)
    - サイズ: 約640MB
-   - 配置先: `app/src/main/assets/models/llama_cpp/tinyllama-1.1b-q4.bin`
+   - 用途: 軽量で高速な推論、テスト用
 
 2. **Llama 2 7B Chat Q4** (大容量モデル)
-   - ダウンロード: [llama-2-7b-chat.q4_0.bin](https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/llama-2-7b-chat.q4_0.bin)
-   - サイズ: 約3.8GB
-   - 配置先: `app/src/main/assets/models/llama_cpp/llama2-7b-chat-q4.bin`
+   - サイズ: 約3.8GB  
+   - 用途: より高品質な生成、本格的な利用
 
 3. **Phi-2 Q4**
-   - ダウンロード: [phi-2-q4_0.bin](https://huggingface.co/microsoft/phi-2-ggml/resolve/main/phi-2-q4_0.bin)
    - サイズ: 約1.5GB
-   - 配置先: `app/src/main/assets/models/llama_cpp/phi-2-q4.bin`
-
-### 配置手順
-
-1. 上記のリンクからモデルファイルをダウンロード
-2. プロジェクトの `app/src/main/assets/models/` ディレクトリを作成（存在しない場合）
-3. プロバイダーごとのサブディレクトリを作成：
-   - `app/src/main/assets/models/llama_cpp/` (llama.cpp用)
-   - `app/src/main/assets/models/lite_rt/` (LiteRT用)
-4. ダウンロードしたファイルを対応するディレクトリに配置
-5. アプリをビルド・実行
+   - 用途: Microsoft製の中規模モデル
 
 ### 注意事項
 
-- モデルファイルは大容量のため、Git LFSの使用を推奨します
-- 初回起動時、アプリはassetsからアプリの内部ストレージにモデルをコピーします
+- モデルファイルは大容量のため、Wi-Fi環境でのダウンロードを推奨します
+- ダウンロードしたモデルはアプリの内部ストレージに保存されます
 - ストレージ容量に注意してください（TinyLlamaで約640MB、Llama 2で約3.8GB必要）
+- アプリをアンインストールするとダウンロードしたモデルも削除されます
 
 ## Session Proposal
 ```
