@@ -369,6 +369,18 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
         struct llama_sampler * sampler_req = llama_sampler_chain_init(chain_params_req);
         llama_sampler_chain_add(sampler_req, llama_sampler_init_top_p(topP, 1));
         llama_sampler_chain_add(sampler_req, llama_sampler_init_temp(temperature));
+        // Add repetition penalties to suppress loops
+        // Use a moderate window and penalties to reduce repeated phrases without harming coherence
+        {
+            const int32_t penalty_last_n = 64;
+            const float repeat_penalty = 1.10f;     // >1.0 penalizes repeats
+            const float alpha_frequency = 0.20f;    // discourages frequent tokens
+            const float alpha_presence  = 0.20f;    // encourages novelty
+            llama_sampler_chain_add(
+                sampler_req,
+                llama_sampler_init_penalties(penalty_last_n, repeat_penalty, alpha_frequency, alpha_presence)
+            );
+        }
         llama_sampler_chain_add(sampler_req, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
         // If prompt indicates JSON-only, constrain with grammar to ensure valid JSON object
         if (strstr(promptStr, "JSON only") != nullptr) {
@@ -387,6 +399,11 @@ ws ::= [ \t\n\r]*
             if (gsampler != NULL) {
                 llama_sampler_chain_add(sampler_req, gsampler);
             }
+        }
+
+        // Prime sampler with the prompt tokens so repetition penalties consider the context
+        for (const auto & tok : wrapper->tokens) {
+            llama_sampler_accept(sampler_req, tok);
         }
 
         // Generate tokens
@@ -419,6 +436,8 @@ ws ::= [ \t\n\r]*
             
             // Decode the new token
             wrapper->tokens.push_back(new_token_id);
+            // Inform sampler about the accepted token to update internal state (repetition, grammar, etc.)
+            llama_sampler_accept(sampler_req, new_token_id);
             struct llama_batch batch_single = llama_batch_get_one(&new_token_id, 1);
             if (llama_decode(wrapper->ctx, batch_single)) {
                 LOGE("Failed to decode new token");
