@@ -9,6 +9,7 @@
 #include <cstring>
 #include <sstream>
 #include <limits>
+#include <string>
 
 #define LOG_TAG "LlamaCppJNI"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -27,6 +28,7 @@ struct llama_context_wrapper {
     int32_t n_batch;
     std::mutex generation_mutex;
     bool is_generating;
+    std::string utf8_cache;
     
     llama_context_wrapper() : model(nullptr), ctx(nullptr), sampler(nullptr), n_ctx(2048), n_batch(32), is_generating(false) {}
     
@@ -58,6 +60,34 @@ struct llama_context_wrapper {
 #endif
 
 extern "C" {
+// Validate UTF-8 byte sequence (simple check sufficient for JNI NewStringUTF)
+static bool is_valid_utf8(const char * str) {
+    if (str == nullptr) return true;
+    const unsigned char * bytes = reinterpret_cast<const unsigned char *>(str);
+    while (*bytes != 0x00) {
+        int remaining = 0;
+        if ((*bytes & 0x80) == 0x00) {
+            remaining = 0; // 1-byte
+        } else if ((*bytes & 0xE0) == 0xC0) {
+            remaining = 1; // 2-byte
+        } else if ((*bytes & 0xF0) == 0xE0) {
+            remaining = 2; // 3-byte
+        } else if ((*bytes & 0xF8) == 0xF0) {
+            remaining = 3; // 4-byte
+        } else {
+            return false;
+        }
+        bytes++;
+        for (int i = 0; i < remaining; ++i) {
+            if ((*bytes & 0xC0) != 0x80) {
+                return false;
+            }
+            bytes++;
+        }
+    }
+    return true;
+}
+
 
 // Model management
 JNIEXPORT jlong JNICALL
@@ -213,6 +243,7 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
     try {
 #ifdef LLAMA_CPP_AVAILABLE
         LOGI("Starting generation with prompt: %s", promptStr);
+        wrapper->utf8_cache.clear();
         
         // Tokenize prompt
         const struct llama_model* model = llama_get_model(wrapper->ctx);
@@ -351,12 +382,15 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
             }
             token_str[n_chars] = '\0';
             
-            response += token_str;
-            
-            // Send token to callback
-            jstring jToken = env->NewStringUTF(token_str);
-            env->CallVoidMethod(callback, onTokenMethod, jToken);
-            env->DeleteLocalRef(jToken);
+            // Accumulate and emit only valid UTF-8 chunks to satisfy JNI NewStringUTF
+            wrapper->utf8_cache.append(token_str, n_chars);
+            if (is_valid_utf8(wrapper->utf8_cache.c_str())) {
+                response += wrapper->utf8_cache;
+                jstring jToken = env->NewStringUTF(wrapper->utf8_cache.c_str());
+                env->CallVoidMethod(callback, onTokenMethod, jToken);
+                env->DeleteLocalRef(jToken);
+                wrapper->utf8_cache.clear();
+            }
             
             // Decode the new token
             wrapper->tokens.push_back(new_token_id);
@@ -394,6 +428,21 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
         }
 #endif
         
+        // Flush any remaining cached bytes by trimming invalid tail if needed
+        if (!wrapper->utf8_cache.empty()) {
+            // Trim trailing bytes until valid UTF-8 or empty
+            while (!wrapper->utf8_cache.empty() && !is_valid_utf8(wrapper->utf8_cache.c_str())) {
+                wrapper->utf8_cache.pop_back();
+            }
+            if (!wrapper->utf8_cache.empty()) {
+                response += wrapper->utf8_cache;
+                jstring jToken = env->NewStringUTF(wrapper->utf8_cache.c_str());
+                env->CallVoidMethod(callback, onTokenMethod, jToken);
+                env->DeleteLocalRef(jToken);
+                wrapper->utf8_cache.clear();
+            }
+        }
+
         env->CallVoidMethod(callback, onCompleteMethod);
         
     } catch (const std::exception& e) {
