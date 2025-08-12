@@ -133,7 +133,7 @@ class GeminiNanoRepository @Inject constructor(
                 firstTokenTime = System.currentTimeMillis() - startTime
             }
             onToken("$token ")
-            kotlinx.coroutines.delay(80) // Simulate faster response than other providers
+            kotlinx.coroutines.delay(60) // Slightly faster
         }
     }
     

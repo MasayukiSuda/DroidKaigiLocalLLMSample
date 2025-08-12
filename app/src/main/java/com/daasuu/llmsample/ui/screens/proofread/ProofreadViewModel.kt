@@ -90,9 +90,14 @@ class ProofreadViewModel @Inject constructor(
                     _correctedText.value = parsed.first
                     _corrections.value = parsed.second
                 } else {
-                    // 解析できない場合は自由文を採用しない（元文のまま）
-                    _correctedText.value = ""
-                    _corrections.value = emptyList()
+                    // 解析できない場合でも、原文からの微小差分なら候補として採用
+                    if (isMinorEdit(_inputText.value, response)) {
+                        _correctedText.value = response
+                        _corrections.value = emptyList()
+                    } else {
+                        _correctedText.value = ""
+                        _corrections.value = emptyList()
+                    }
                 }
             } else {
                 _corrections.value = emptyList()
@@ -177,5 +182,39 @@ class ProofreadViewModel @Inject constructor(
             }
             if (text != original) text else null
         }
+    }
+
+    private fun isMinorEdit(original: String, candidate: String): Boolean {
+        if (candidate.isBlank()) return false
+        val maxLen = maxOf(original.length, candidate.length)
+        if (maxLen == 0) return false
+        val distance = levenshteinDistance(original, candidate)
+        val ratio = distance.toDouble() / maxLen.toDouble()
+        // しきい値: 変更率が 0.25 以下、かつ長さ差が原文の ±20% 以内
+        val lengthOk = kotlin.math.abs(original.length - candidate.length) <= (original.length * 0.2).toInt()
+        return ratio <= 0.25 && lengthOk
+    }
+
+    private fun levenshteinDistance(a: String, b: String): Int {
+        val n = a.length
+        val m = b.length
+        if (n == 0) return m
+        if (m == 0) return n
+        val dp = IntArray(m + 1) { it }
+        for (i in 1..n) {
+            var prev = dp[0]
+            dp[0] = i
+            for (j in 1..m) {
+                val temp = dp[j]
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                dp[j] = minOf(
+                    dp[j] + 1,      // deletion
+                    dp[j - 1] + 1,  // insertion
+                    prev + cost     // substitution
+                )
+                prev = temp
+            }
+        }
+        return dp[m]
     }
 }

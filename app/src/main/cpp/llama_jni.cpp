@@ -364,10 +364,35 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
             n_eval += n_tokens_batch;
         }
         
+        // Build per-request sampler with temperature/topP and optional JSON grammar
+        llama_sampler_chain_params chain_params_req = llama_sampler_chain_default_params();
+        struct llama_sampler * sampler_req = llama_sampler_chain_init(chain_params_req);
+        llama_sampler_chain_add(sampler_req, llama_sampler_init_top_p(topP, 1));
+        llama_sampler_chain_add(sampler_req, llama_sampler_init_temp(temperature));
+        llama_sampler_chain_add(sampler_req, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+        // If prompt indicates JSON-only, constrain with grammar to ensure valid JSON object
+        if (strstr(promptStr, "JSON only") != nullptr) {
+            const char * grammar_str = R"GBNF(
+root ::= object
+object ::= "{" ws "\"corrected_text\"" ws ":" ws string ws "," ws "\"corrections\"" ws ":" ws "[" ws (correction (ws "," ws correction)*)? ws "]" ws "}"
+correction ::= "{" ws "\"original\"" ws ":" ws string ws "," ws "\"suggested\"" ws ":" ws string ws "," ws "\"type\"" ws ":" ws string ws "," ws "\"explanation\"" ws ":" ws string ws "," ws "\"start\"" ws ":" ws number ws "," ws "\"end\"" ws ":" ws number ws "}"
+string ::= "\"" chars "\""
+chars ::= char*
+char ::= [^"\\\n\r\t\0\f\v]
+number ::= digit+
+digit ::= [0-9]
+ws ::= [ \t\n\r]*
+)GBNF";
+            struct llama_sampler * gsampler = llama_sampler_init_grammar(vocab, grammar_str, "root");
+            if (gsampler != NULL) {
+                llama_sampler_chain_add(sampler_req, gsampler);
+            }
+        }
+
         // Generate tokens
         for (int i = 0; i < maxTokens && wrapper->is_generating; ++i) {
             // Sample next token
-            llama_token new_token_id = llama_sampler_sample(wrapper->sampler, wrapper->ctx, -1);
+            llama_token new_token_id = llama_sampler_sample(sampler_req, wrapper->ctx, -1);
             
             if (llama_vocab_is_eog(vocab, new_token_id)) {
                 break;
@@ -400,6 +425,11 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
                 break;
             }
             n_eval++;
+        }
+        // Free per-request sampler
+        if (sampler_req) {
+            llama_sampler_free(sampler_req);
+            sampler_req = nullptr;
         }
         
 #else

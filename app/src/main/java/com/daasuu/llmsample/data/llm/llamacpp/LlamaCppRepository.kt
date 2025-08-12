@@ -226,9 +226,9 @@ class LlamaCppRepository @Inject constructor(
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
                 prompt = prompt,
-                maxTokens = 512,
-                temperature = 0.7f,
-                topP = 0.9f,
+                maxTokens = 256,
+                temperature = 0.2f,
+                topP = 0.95f,
                 callback = object : LlamaCppJNI.GenerationCallback {
                     override fun onToken(token: String) {
                         if (firstTokenTime == 0L) {
