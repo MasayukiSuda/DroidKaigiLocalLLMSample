@@ -166,8 +166,8 @@ class LlamaCppRepository @Inject constructor(
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
                 prompt = prompt,
-                maxTokens = 512,
-                temperature = 0.7f,
+                maxTokens = 128,
+                temperature = 0.2f,
                 topP = 0.9f,
                 callback = object : LlamaCppJNI.GenerationCallback {
                     override fun onToken(token: String) {
@@ -271,9 +271,47 @@ class LlamaCppRepository @Inject constructor(
         if (cleanText.isEmpty()) {
             return "Hello"
         }
-        
-        // Try the absolute simplest format first
-        return "Summarize: $cleanText"
+
+        val isJapanese = containsJapanese(cleanText)
+        if (isJapanese) {
+            return """
+以下のテキストを日本語で簡潔に要約してください。出力は箇条書きで2〜3点。前置きや締めの文は不要で、要点のみを示してください。翻訳はせず、日本語で出力してください。
+
+本文:
+---
+$cleanText
+---
+
+要約:
+-
+""".trimIndent()
+        }
+
+        // Non-Japanese: keep English instruction but emphasize not to translate
+        return """
+Summarize the following text concisely in the same language as the input. Output 2-3 bullet points. Do not translate. No preface or closing, only the summary.
+
+Text:
+---
+$cleanText
+---
+
+Summary:
+-
+""".trimIndent()
+    }
+
+    private fun containsJapanese(text: String): Boolean {
+        for (ch in text) {
+            val block = java.lang.Character.UnicodeBlock.of(ch)
+            if (block == java.lang.Character.UnicodeBlock.HIRAGANA ||
+                block == java.lang.Character.UnicodeBlock.KATAKANA ||
+                block == java.lang.Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS
+            ) {
+                return true
+            }
+        }
+        return false
     }
     
     private fun buildProofreadingPrompt(text: String): String {

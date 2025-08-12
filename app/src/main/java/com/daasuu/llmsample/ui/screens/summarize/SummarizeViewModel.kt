@@ -2,6 +2,7 @@ package com.daasuu.llmsample.ui.screens.summarize
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -16,6 +17,12 @@ import javax.inject.Inject
 class SummarizeViewModel @Inject constructor(
     private val llmManager: LLMManager
 ) : ViewModel() {
+    init {
+        viewModelScope.launch {
+            // 要約画面でも LLM を初期化
+            llmManager.initialize(LLMProvider.LLAMA_CPP)
+        }
+    }
     
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()

@@ -122,14 +122,45 @@ class GeminiNanoRepository @Inject constructor(
     }
     
     private fun buildSummarizationPrompt(text: String): String {
+        val isJapanese = containsJapanese(text)
+        if (isJapanese) {
+            return """
+以下のテキストを日本語で簡潔に要約してください。出力は箇条書きで2〜3点。前置きや締めの文は不要で、要点のみを示してください。翻訳はせず、日本語で出力してください。
+
+本文:
+---
+$text
+---
+
+要約:
+-
+""".trimIndent()
+        }
+
         return """
-            以下のテキストを簡潔に要約してください。要点を3つのポイントにまとめて、わかりやすく説明してください。
-            
-            テキスト:
-            $text
-            
-            要約:
-        """.trimIndent()
+Summarize the following text concisely in the same language as the input. Output 2-3 bullet points. Do not translate. No preface or closing, only the summary.
+
+Text:
+---
+$text
+---
+
+Summary:
+-
+""".trimIndent()
+    }
+
+    private fun containsJapanese(text: String): Boolean {
+        for (ch in text) {
+            val block = java.lang.Character.UnicodeBlock.of(ch)
+            if (block == java.lang.Character.UnicodeBlock.HIRAGANA ||
+                block == java.lang.Character.UnicodeBlock.KATAKANA ||
+                block == java.lang.Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS
+            ) {
+                return true
+            }
+        }
+        return false
     }
     
     private fun buildProofreadingPrompt(text: String): String {
