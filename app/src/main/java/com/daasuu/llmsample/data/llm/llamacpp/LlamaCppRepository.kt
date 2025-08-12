@@ -26,6 +26,7 @@ class LlamaCppRepository @Inject constructor(
     private var modelPtr: Long = 0L
     private var isInitialized = false
     private var firstTokenTime: Long = 0L
+    private var isMock: Boolean = false
     
     override suspend fun initialize() {
         if (isInitialized) return
@@ -65,6 +66,7 @@ class LlamaCppRepository @Inject constructor(
                         
                         if (modelPtr != 0L) {
                             isInitialized = true
+                            isMock = false
                             println("LlamaCpp model loaded successfully with pointer: $modelPtr")
                             return@withContext
                         } else {
@@ -95,11 +97,13 @@ class LlamaCppRepository @Inject constructor(
                 nGpuLayers = 0
             )
             isInitialized = modelPtr != 0L
+            isMock = true
             println("Mock LlamaCpp initialized: $isInitialized")
         } catch (e: Exception) {
             e.printStackTrace()
             isInitialized = false
             modelPtr = 0L
+            isMock = false
         }
     }
     
@@ -195,6 +199,28 @@ class LlamaCppRepository @Inject constructor(
         val prompt = buildProofreadingPrompt(text)
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
+
+        // If running in mock mode and prompt requests JSON, synthesize JSON stream here
+        if (isMock && prompt.contains("JSON only") && prompt.contains("Text:")) {
+            val original = prompt.substringAfter("Text:").trim()
+            val corrected = original.replace("テキスト", "文章")
+            val startIdx = original.indexOf("テキスト").coerceAtLeast(0)
+            val endIdx = (if (startIdx >= 0) startIdx + 3 else 0)
+            val json = """
+            {"corrected_text":"${corrected}","corrections":[{"original":"テキスト","suggested":"文章","type":"表現","explanation":"より自然な表現です","start":${startIdx},"end":${endIdx}}]}
+            """.trimIndent()
+            val chunks = json.chunked(24)
+            withContext(Dispatchers.IO) {
+                chunks.forEach { chunk ->
+                    if (firstTokenTime == 0L) {
+                        firstTokenTime = System.currentTimeMillis() - startTime
+                    }
+                    trySend(chunk)
+                    kotlinx.coroutines.delay(30)
+                }
+            }
+            return@channelFlow
+        }
         
         withContext(Dispatchers.IO) {
             LlamaCppJNI.generate(
@@ -315,13 +341,18 @@ Summary:
     }
     
     private fun buildProofreadingPrompt(text: String): String {
-        // Ultra-simple prompt to avoid tokenization issues
-        val cleanText = text.trim().take(500) // Very short limit
+        // Keep instruction extremely compact to accommodate tiny models
+        val cleanText = text.trim().take(500)
         if (cleanText.isEmpty()) {
-            return "Hello"
+            return "{}"
         }
-        
-        // Try the absolute simplest format first
-        return "Check: $cleanText"
+
+        // Ask for strict JSON only to allow deterministic parsing on UI side
+        // Keep everything single-line and short
+        return (
+            "JSON only. No prose. Japanese proofreading: minimal edits only, preserve meaning/order, do not add info. " +
+            "Format {\"corrected_text\":string,\"corrections\":[{\"original\":string,\"suggested\":string,\"type\":string,\"explanation\":string,\"start\":number,\"end\":number}]}. " +
+            "Text: " + cleanText
+        )
     }
 }

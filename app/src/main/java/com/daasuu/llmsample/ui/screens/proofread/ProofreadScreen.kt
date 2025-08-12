@@ -21,6 +21,8 @@ fun ProofreadScreen(
     val inputText by viewModel.inputText.collectAsState()
     val corrections by viewModel.corrections.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val correctedText by viewModel.correctedText.collectAsState()
+    val rawOutput by viewModel.rawOutput.collectAsState()
 
     Column(
         modifier = Modifier
@@ -52,7 +54,7 @@ fun ProofreadScreen(
             }
         }
 
-        if (corrections.isNotEmpty() || isLoading) {
+        if (inputText.isNotBlank()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -73,14 +75,38 @@ fun ProofreadScreen(
                         )
                         
                         if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "校正中...",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            }
                         }
                     }
                     
-                    if (corrections.isNotEmpty()) {
+                    if (!isLoading && (corrections.isNotEmpty() || correctedText.isNotBlank())) {
+                        if (correctedText.isNotBlank()) {
+                            Text(
+                                text = "修正後の文章",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = correctedText,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        }
+
+                        Text(
+                            text = "修正前（ハイライト表示）",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             text = buildHighlightedText(inputText, corrections),
                             style = MaterialTheme.typography.bodyMedium
@@ -120,9 +146,32 @@ fun ProofreadScreen(
                                 }
                             }
                         }
-                    } else {
+                    } else if (!isLoading) {
+                        if (rawOutput.isNotBlank()) {
+                            Text(
+                                text = "モデル出力 (解析できませんでした)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = rawOutput,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        }
                         Text(
-                            text = "校正中...",
+                            text = "修正は見つかりませんでした。",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text(
+                            text = "修正前の文章",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = inputText,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }

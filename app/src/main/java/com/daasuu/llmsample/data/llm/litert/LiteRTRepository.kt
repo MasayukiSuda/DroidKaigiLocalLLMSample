@@ -195,7 +195,21 @@ class LiteRTRepository @Inject constructor(
     private suspend fun mockInference(inputTokens: IntArray): List<String> {
         // Mock inference - in production, this would use the actual TFLite interpreter
         delay(100) // Simulate model inference time
-        
+
+        val prompt = inputTokens.joinToString(separator = " ") { idx -> reverseVocabulary[idx] ?: "" }
+        if (prompt.contains("JSON only") && prompt.contains("Text:")) {
+            // Return single JSON string as token list chunks
+            val originalStart = prompt.indexOf("Text:")
+            val original = if (originalStart >= 0) prompt.substring(originalStart + 5).trim() else ""
+            val corrected = original.replace("テキスト", "文章")
+            val startIdx = original.indexOf("テキスト").coerceAtLeast(0)
+            val endIdx = (if (startIdx >= 0) startIdx + 3 else 0)
+            val json = """
+            {"corrected_text":"${corrected}","corrections":[{"original":"テキスト","suggested":"文章","type":"表現","explanation":"より自然な表現です","start":${startIdx},"end":${endIdx}}]}
+            """.trimIndent()
+            return json.chunked(24)
+        }
+
         val response = "LiteRT による回答: ${reverseVocabulary[inputTokens.lastOrNull() ?: 0]} に関する詳細な説明です。"
         return response.split(" ")
     }
@@ -247,6 +261,12 @@ Summary:
     }
     
     private fun buildProofreadingPrompt(text: String): String {
-        return "以下のテキストを校正してください:\n\n$text\n\n校正結果:"
+        val cleanText = text.trim().take(800)
+        if (cleanText.isEmpty()) return "{}"
+        return (
+            "JSON only. No prose. Japanese proofreading: minimal edits only, preserve meaning/order, no additions. " +
+            "Format {\"corrected_text\":string,\"corrections\":[{\"original\":string,\"suggested\":string,\"type\":string,\"explanation\":string,\"start\":number,\"end\":number}]}. " +
+            "Text: " + cleanText
+        )
     }
 }

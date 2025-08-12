@@ -105,10 +105,30 @@ class GeminiNanoRepository @Inject constructor(
     }
     
     private suspend fun mockGenerate(prompt: String, onToken: suspend (String) -> Unit, startTime: Long) {
+        // If proofreading prompt requests JSON, return deterministic JSON for demo
+        if (prompt.contains("JSON only") && prompt.contains("Text:")) {
+            val original = prompt.substringAfter("Text:").trim()
+            val corrected = original.replace("テキスト", "文章")
+            val startIdx = original.indexOf("テキスト").coerceAtLeast(0)
+            val endIdx = (if (startIdx >= 0) startIdx + 3 else 0)
+            val json = """
+            {"corrected_text":"${corrected}","corrections":[{"original":"テキスト","suggested":"文章","type":"表現","explanation":"より自然な表現です","start":${startIdx},"end":${endIdx}}]}
+            """.trimIndent()
+            val chunks = json.chunked(24)
+            chunks.forEach { chunk ->
+                if (firstTokenTime == 0L) {
+                    firstTokenTime = System.currentTimeMillis() - startTime
+                }
+                onToken(chunk)
+                kotlinx.coroutines.delay(40)
+            }
+            return
+        }
+
         val response = "Gemini Nano による回答: $prompt に対する詳細な応答をここに生成します。"
         val tokens = response.split(" ")
         
-        tokens.forEachIndexed { index, token ->
+        tokens.forEach { token ->
             if (firstTokenTime == 0L) {
                 firstTokenTime = System.currentTimeMillis() - startTime
             }
@@ -164,13 +184,12 @@ Summary:
     }
     
     private fun buildProofreadingPrompt(text: String): String {
-        return """
-            以下のテキストを校正してください。誤字脱字、文法の誤り、より自然な表現があれば指摘し、修正案を提示してください。
-            
-            テキスト:
-            $text
-            
-            校正結果:
-        """.trimIndent()
+        val cleanText = text.trim().take(1200)
+        if (cleanText.isEmpty()) return "{}"
+        return (
+            "JSON only. No prose. Japanese proofreading: minimal edits only, preserve meaning/order, no additions. " +
+            "Format {\"corrected_text\":string,\"corrections\":[{\"original\":string,\"suggested\":string,\"type\":string,\"explanation\":string,\"start\":number,\"end\":number}]}. " +
+            "Text: " + cleanText
+        )
     }
 }
