@@ -10,6 +10,7 @@
 #include <sstream>
 #include <limits>
 #include <string>
+#include <cctype>
 
 #define LOG_TAG "LlamaCppJNI"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -367,8 +368,12 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
         // Build per-request sampler with temperature/topP and optional JSON grammar
         llama_sampler_chain_params chain_params_req = llama_sampler_chain_default_params();
         struct llama_sampler * sampler_req = llama_sampler_chain_init(chain_params_req);
+        // add top-k before top-p and clamp temperature to a safe range
+        int32_t top_k = 40;
+        float temp_clamped = std::max(0.1f, std::min((float)temperature, 1.0f));
+        llama_sampler_chain_add(sampler_req, llama_sampler_init_top_k(top_k));
         llama_sampler_chain_add(sampler_req, llama_sampler_init_top_p(topP, 1));
-        llama_sampler_chain_add(sampler_req, llama_sampler_init_temp(temperature));
+        llama_sampler_chain_add(sampler_req, llama_sampler_init_temp(temp_clamped));
         // Add repetition penalties to suppress loops
         // Use a moderate window and penalties to reduce repeated phrases without harming coherence
         {
@@ -407,6 +412,7 @@ ws ::= [ \t\n\r]*
         }
 
         // Generate tokens
+        std::string guard_window; guard_window.reserve(256);
         for (int i = 0; i < maxTokens && wrapper->is_generating; ++i) {
             // Sample next token
             llama_token new_token_id = llama_sampler_sample(sampler_req, wrapper->ctx, -1);
@@ -426,6 +432,43 @@ ws ::= [ \t\n\r]*
             
             // Accumulate and emit only valid UTF-8 chunks to satisfy JNI NewStringUTF
             wrapper->utf8_cache.append(token_str, n_chars);
+            // Early stop if the model starts roleplay or multi-speaker dialogues
+            // Heuristics: block prefixes like "User:", "Assistant:", "System:", "Mom:", "Dad:", "Son:", "Daughter:" (both en/ja common variants)
+            auto contains_role_marker = [](const std::string & s) -> size_t {
+                static const char * markers[] = {
+                    "\nUser:", "\nAssistant:", "\nSystem:",
+                    "\nMom:", "\nDad:", "\nSon:", "\nDaughter:",
+                    "\n母:", "\n父:", "\n息子:", "\n娘:",
+                };
+                for (auto m : markers) {
+                    size_t p = s.find(m);
+                    if (p != std::string::npos) return p;
+                }
+                return std::string::npos;
+            };
+            // First, if the marker appears entirely in the current cache, trim and flush before stopping
+            size_t role_pos_cache = contains_role_marker(wrapper->utf8_cache);
+            if (role_pos_cache != std::string::npos) {
+                wrapper->utf8_cache.erase(role_pos_cache);
+                if (!wrapper->utf8_cache.empty() && is_valid_utf8(wrapper->utf8_cache.c_str())) {
+                    response += wrapper->utf8_cache;
+                    jstring jToken = env->NewStringUTF(wrapper->utf8_cache.c_str());
+                    env->CallVoidMethod(callback, onTokenMethod, jToken);
+                    env->DeleteLocalRef(jToken);
+                }
+                wrapper->utf8_cache.clear();
+                break;
+            }
+            // Maintain rolling guard window across emissions to catch markers split across tokens
+            guard_window.append(token_str, n_chars);
+            if (guard_window.size() > 128) {
+                guard_window.erase(0, guard_window.size() - 128);
+            }
+            if (contains_role_marker(guard_window) != std::string::npos) {
+                // Stop without flushing current cache to avoid leaking partial markers
+                wrapper->utf8_cache.clear();
+                break;
+            }
             if (is_valid_utf8(wrapper->utf8_cache.c_str())) {
                 response += wrapper->utf8_cache;
                 jstring jToken = env->NewStringUTF(wrapper->utf8_cache.c_str());

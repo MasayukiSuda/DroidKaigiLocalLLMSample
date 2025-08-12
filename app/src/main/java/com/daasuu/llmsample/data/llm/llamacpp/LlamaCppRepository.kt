@@ -27,6 +27,8 @@ class LlamaCppRepository @Inject constructor(
     private var isInitialized = false
     private var firstTokenTime: Long = 0L
     private var isMock: Boolean = false
+    private val chatHistory: ArrayDeque<Pair<String, String>> = ArrayDeque()
+    private val maxHistoryTurns: Int = 4 // keep last N user-assistant pairs
     
     override suspend fun initialize() {
         if (isInitialized) return
@@ -128,24 +130,26 @@ class LlamaCppRepository @Inject constructor(
         val fullPrompt = buildChatPrompt(prompt)
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
+        val responseBuilder = StringBuilder()
         
         withContext(Dispatchers.IO) {
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
                 prompt = fullPrompt,
-                maxTokens = 512,
-                temperature = 0.7f,
+                maxTokens = 160,
+                temperature = 0.4f,
                 topP = 0.9f,
                 callback = object : LlamaCppJNI.GenerationCallback {
                     override fun onToken(token: String) {
                         if (firstTokenTime == 0L) {
                             firstTokenTime = System.currentTimeMillis() - startTime
                         }
+                        responseBuilder.append(token)
                         trySend(token)
                     }
                     
                     override fun onComplete() {
-                        // Generation complete
+                        // Do not add to history for now to avoid compounding errors
                     }
                     
                     override fun onError(error: String) {
@@ -281,14 +285,33 @@ class LlamaCppRepository @Inject constructor(
     }
     
     private fun buildChatPrompt(userMessage: String): String {
-        // Ultra-simple prompt to avoid tokenization issues
-        val cleanMessage = userMessage.trim().take(500) // Very short limit
-        if (cleanMessage.isEmpty()) {
-            return "Hello"
+        val cleanMessage = userMessage.trim().take(500)
+        if (cleanMessage.isEmpty()) return "Hello"
+
+        // Detect language rough heuristic to localize system prompt
+        val isJapanese = containsJapanese(cleanMessage)
+        return if (isJapanese) {
+            // 単発・簡潔回答 + ロールプレイ禁止を明示
+            (
+                "指示: 次の入力に日本語で簡潔に返答してください。2文以内。ロールプレイや複数人物の会話(例: Mom:, Son:, 母:, 父:, 息子:, 娘:)は禁止。あなた(Assistant)以外の発話は書かない。\n" +
+                "入力: " + cleanMessage + "\n" +
+                "返答:"
+            )
+        } else {
+            (
+                "Instruction: Respond concisely in at most 2 sentences. Do NOT roleplay or write multi-speaker dialogues (e.g., Mom:, Dad:, Son:, Daughter:). Write only your answer as the assistant.\n" +
+                "Input: " + cleanMessage + "\n" +
+                "Answer:"
+            )
         }
-        
-        // Try the absolute simplest format first
-        return cleanMessage
+    }
+
+    private fun addToHistory(user: String, assistant: String) {
+        if (user.isBlank() || assistant.isBlank()) return
+        chatHistory.addLast(user.trim() to assistant.trim())
+        while (chatHistory.size > maxHistoryTurns) {
+            chatHistory.removeFirst()
+        }
     }
     
     private fun buildSummarizationPrompt(text: String): String {
