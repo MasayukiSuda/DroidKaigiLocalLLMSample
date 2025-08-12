@@ -8,6 +8,7 @@
 #include <mutex>
 #include <cstring>
 #include <sstream>
+#include <limits>
 
 #define LOG_TAG "LlamaCppJNI"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -264,49 +265,62 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
         }
         
         LOGI("Attempting tokenization with vocabulary");
-        
-        // First, get the required buffer size
-        int n_tokens = llama_tokenize(vocab, promptStr, strlen(promptStr), nullptr, 0, true, false);
-        LOGI("Tokenization attempt 1: n_tokens = %d", n_tokens);
+
+        // Phase 1: query required token buffer size
+        int32_t n_tokens_res = llama_tokenize(
+            vocab,
+            promptStr,
+            static_cast<int32_t>(strlen(promptStr)),
+            nullptr,
+            0,
+            /*add_special=*/true,
+            /*parse_special=*/false);
+
+        if (n_tokens_res == std::numeric_limits<int32_t>::min()) {
+            LOGE("Tokenization failed: input too large (int32 overflow)");
+            jstring errorStr = env->NewStringUTF("Prompt too large to tokenize");
+            env->CallVoidMethod(callback, onErrorMethod, errorStr);
+            env->DeleteLocalRef(errorStr);
+            wrapper->is_generating = false;
+            env->ReleaseStringUTFChars(prompt, promptStr);
+            return env->NewStringUTF("Error: Prompt too large");
+        }
+
+        int32_t n_tokens_needed = n_tokens_res < 0 ? -n_tokens_res : n_tokens_res;
+        LOGI("Tokenization buffer required: %d tokens", n_tokens_needed);
+
+        // Phase 2: allocate and tokenize into buffer
+        wrapper->tokens.resize(n_tokens_needed);
+        int32_t n_tokens = llama_tokenize(
+            vocab,
+            promptStr,
+            static_cast<int32_t>(strlen(promptStr)),
+            wrapper->tokens.data(),
+            static_cast<int32_t>(wrapper->tokens.size()),
+            /*add_special=*/true,
+            /*parse_special=*/false);
+
         if (n_tokens < 0) {
-            LOGE("Failed to tokenize prompt: %s (length: %zu)", promptStr, strlen(promptStr));
-            
-            // Try with a simple fallback prompt to test if the issue is with the content
-            const char* testPrompt = "Hello";
-            int test_tokens = llama_tokenize(vocab, testPrompt, strlen(testPrompt), nullptr, 0, true, false);
-            LOGI("Test tokenization with 'Hello': n_tokens = %d", test_tokens);
-            
-            jstring errorStr;
-            if (test_tokens < 0) {
-                LOGE("Even simple tokenization failed - model/tokenizer issue");
-                errorStr = env->NewStringUTF("Model tokenizer not working");
-            } else {
-                LOGE("Prompt content causing tokenization failure");
-                errorStr = env->NewStringUTF("Prompt content invalid");
-            }
+            // This should not happen after allocating the required size, but handle defensively
+            LOGE("Tokenization failed unexpectedly after allocation");
+            jstring errorStr = env->NewStringUTF("Tokenization failed");
             env->CallVoidMethod(callback, onErrorMethod, errorStr);
             env->DeleteLocalRef(errorStr);
             wrapper->is_generating = false;
             env->ReleaseStringUTFChars(prompt, promptStr);
             return env->NewStringUTF("Error: Tokenization failed");
         }
-        
         LOGI("Tokenization successful: %d tokens", n_tokens);
+        // shrink to actual token count to avoid reading uninitialized values
         wrapper->tokens.resize(n_tokens);
-        int actual_tokens = llama_tokenize(vocab, promptStr, strlen(promptStr), wrapper->tokens.data(), n_tokens, true, false);
-        LOGI("Actual tokenization result: %d tokens", actual_tokens);
-        
+
         // Evaluate prompt
         int n_eval = 0;
         for (size_t i = 0; i < wrapper->tokens.size(); i += wrapper->n_batch) {
             int n_tokens_batch = std::min(wrapper->n_batch, (int)(wrapper->tokens.size() - i));
             struct llama_batch batch = llama_batch_get_one(&wrapper->tokens[i], n_tokens_batch);
-            
-            // Set positions for batch
-            for (int j = 0; j < n_tokens_batch; ++j) {
-                batch.pos[j] = n_eval + j;
-            }
-            
+
+            // When pos == nullptr, llama_decode will track positions automatically
             if (llama_decode(wrapper->ctx, batch)) {
                 LOGE("Failed to decode prompt");
                 jstring errorStr = env->NewStringUTF("Prompt evaluation failed");
@@ -347,7 +361,6 @@ Java_com_daasuu_llmsample_data_llm_llamacpp_LlamaCppJNI_generateNative(
             // Decode the new token
             wrapper->tokens.push_back(new_token_id);
             struct llama_batch batch_single = llama_batch_get_one(&new_token_id, 1);
-            batch_single.pos[0] = n_eval;
             if (llama_decode(wrapper->ctx, batch_single)) {
                 LOGE("Failed to decode new token");
                 break;
