@@ -93,7 +93,7 @@ class ProofreadViewModel @Inject constructor(
                     // 解析できない場合でも、原文からの微小差分なら候補として採用
                     if (isMinorEdit(_inputText.value, response)) {
                         _correctedText.value = response
-                        _corrections.value = emptyList()
+                        _corrections.value = buildSingleSpanCorrection(_inputText.value, response)
                     } else {
                         _correctedText.value = ""
                         _corrections.value = emptyList()
@@ -216,5 +216,39 @@ class ProofreadViewModel @Inject constructor(
             }
         }
         return dp[m]
+    }
+
+    private fun buildSingleSpanCorrection(original: String, candidate: String): List<ProofreadCorrection> {
+        if (original == candidate) return emptyList()
+        val n = original.length
+        val m = candidate.length
+        // find common prefix
+        var prefix = 0
+        while (prefix < n && prefix < m && original[prefix] == candidate[prefix]) {
+            prefix++
+        }
+        // find common suffix
+        var suffix = 0
+        while (suffix < (n - prefix) && suffix < (m - prefix) &&
+            original[n - 1 - suffix] == candidate[m - 1 - suffix]) {
+            suffix++
+        }
+        val origMidStart = prefix
+        val origMidEnd = n - suffix
+        val candMidStart = prefix
+        val candMidEnd = m - suffix
+        val originalMid = original.substring(origMidStart, origMidEnd)
+        val candidateMid = candidate.substring(candMidStart, candMidEnd)
+        if (originalMid == candidateMid) return emptyList()
+        return listOf(
+            ProofreadCorrection(
+                original = originalMid,
+                suggested = candidateMid,
+                type = "文法",
+                explanation = "最小差分の修正",
+                start = origMidStart,
+                end = origMidEnd
+            )
+        )
     }
 }
