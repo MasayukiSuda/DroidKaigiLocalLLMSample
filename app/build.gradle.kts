@@ -91,6 +91,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     
+    // DataStore (Preferences)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
     // TensorFlow Lite
     // Use LiteRT via Google Play services API (Java API + GPU delegate)
     implementation("com.google.android.gms:play-services-tflite-java:16.4.0")
