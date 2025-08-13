@@ -50,7 +50,15 @@ fun MainScreen() {
                     IconButton(onClick = { showModelDownload = true }) {
                         Icon(Icons.Default.Download, contentDescription = "モデル管理")
                     }
-                    IconButton(onClick = { showBenchmark = true }) {
+                    IconButton(onClick = {
+                        navController.navigate("benchmark") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }) {
                         Icon(Icons.Default.Speed, contentDescription = "ベンチマーク")
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -111,14 +119,7 @@ fun MainScreen() {
         )
     }
     
-    // Benchmark dashboard modal
-    if (showBenchmark) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            BenchmarkDashboardScreen(
-                onBack = { showBenchmark = false }
-            )
-        }
-    }
+    // Benchmarkはボトムナビ/トップバーから画面遷移するためモーダルは削除
     
     // Model download modal
     if (showModelDownload) {
