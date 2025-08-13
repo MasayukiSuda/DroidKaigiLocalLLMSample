@@ -92,9 +92,9 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     
     // TensorFlow Lite
-    implementation("org.tensorflow:tensorflow-lite:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    // Use LiteRT via Google Play services API (Java API + GPU delegate)
+    implementation("com.google.android.gms:play-services-tflite-java:16.4.0")
+    implementation("com.google.android.gms:play-services-tflite-gpu:16.4.0")
     
     // ML Kit GenAI API (Gemini Nano) - Mock implementation for now
     // implementation("com.google.mlkit:generative-ai:16.0.0-beta05")

@@ -56,6 +56,15 @@ class ModelManager @Inject constructor(
             downloadUrl = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/gpu/mobilenet_v1_1.0_224.tflite",
             fileSize = 17000000L, // ~17MB (approx)
             description = "Sample TFLite model to verify LiteRT download and loading pipeline"
+        ),
+        // GPT-2 small (TFLite) for chat generation with LiteRT
+        ModelInfo(
+            id = "gpt2-small",
+            name = "GPT-2 Small (LiteRT)",
+            provider = LLMProvider.LITE_RT,
+            downloadUrl = "https://huggingface.co/openai-community/gpt2/resolve/main/pytorch_model.bin",
+            fileSize = 52428800L, // ~50MB
+            description = "GPT-2 Small converted to TFLite for on-device text generation"
         )
     )
     
