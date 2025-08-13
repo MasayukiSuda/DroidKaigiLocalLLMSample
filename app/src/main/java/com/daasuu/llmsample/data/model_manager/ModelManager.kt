@@ -45,6 +45,17 @@ class ModelManager @Inject constructor(
             downloadUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
             fileSize = 1610612736L, // ~1.5GB
             description = "Microsoft Phi-2 model quantized to 4-bit"
+        ),
+        // LiteRT (TensorFlow Lite) sample model for download-run pipeline verification
+        // Note: This is a computer vision model (not NLP). We use it to validate download and loading path.
+        // LiteRTRepository keeps mock text generation for now.
+        ModelInfo(
+            id = "mobilenet-v1-1.0-224",
+            name = "MobileNet v1 1.0 224 (LiteRT sample)",
+            provider = LLMProvider.LITE_RT,
+            downloadUrl = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/gpu/mobilenet_v1_1.0_224.tflite",
+            fileSize = 17000000L, // ~17MB (approx)
+            description = "Sample TFLite model to verify LiteRT download and loading pipeline"
         )
     )
     

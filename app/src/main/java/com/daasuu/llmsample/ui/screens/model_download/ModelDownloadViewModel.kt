@@ -28,8 +28,8 @@ class ModelDownloadViewModel @Inject constructor(
     }
     
     private fun loadModels() {
-        // llama.cpp用のモデルのみを表示
-        _models.value = modelManager.getModelsByProvider(LLMProvider.LLAMA_CPP)
+        // 全プロバイダーのモデルを表示（LiteRTもダウンロード可能に）
+        _models.value = modelManager.getAvailableModels()
     }
     
     fun downloadModel(modelId: String) {
