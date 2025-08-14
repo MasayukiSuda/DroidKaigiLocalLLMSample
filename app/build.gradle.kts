@@ -94,10 +94,8 @@ dependencies {
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // TensorFlow Lite
-    // Use LiteRT via Google Play services API (Java API + GPU delegate)
-    implementation("com.google.android.gms:play-services-tflite-java:16.4.0")
-    implementation("com.google.android.gms:play-services-tflite-gpu:16.4.0")
+    // (準備) .task ランタイムは後続PRで追加予定
+    implementation("com.google.mediapipe:tasks-genai:0.10.25")
     
     // ML Kit GenAI API (Gemini Nano) - Mock implementation for now
     // implementation("com.google.mlkit:generative-ai:16.0.0-beta05")

@@ -2,7 +2,7 @@ package com.daasuu.llmsample.di
 
 import com.daasuu.llmsample.data.llm.gemini.GeminiNanoRepository
 import com.daasuu.llmsample.data.llm.llamacpp.LlamaCppRepository
-import com.daasuu.llmsample.data.llm.litert.LiteRTRepository
+import com.daasuu.llmsample.data.llm.task.TaskRepository
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.Module
@@ -39,7 +39,7 @@ object LLMModule {
     @Singleton
     @LiteRTRepo
     fun provideLiteRTRepository(
-        repository: LiteRTRepository
+        repository: TaskRepository
     ): LLMRepository = repository
     
     @Provides
