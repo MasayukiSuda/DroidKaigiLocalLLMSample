@@ -18,9 +18,13 @@
    - ダウンロード: アプリ内の設定画面から
 
 ### LiteRT (TensorFlow Lite)
-1. **MobileVLM Q4**
-   - サイズ: 約512MB
-   - ダウンロード: アプリ内の設定画面から
+1. **Gemma3 (assets 手動配置)**
+   - サイズ: モデルに依存（数百MB〜）
+   - ダウンロード: なし（手動配置）
+   - 配置手順:
+     - `app/src/main/assets/models/lite_rt/gemma3/` に Gemma3 の `.tflite` を配置
+     - 可能なら `encoder.json` を同ディレクトリに配置（暫定トークナイザ用）
+     - アプリ初回起動時に `files/models/lite_rt/gemma3/` へコピーされ、そこからロードされます
 
 ### ML Kit GenAI API (Gemini Nano)
 - Android 16+ デバイスで自動的に利用可能
@@ -47,7 +51,9 @@
 │   ├── llama2-7b-chat-q4.bin
 │   └── phi-2-q4.bin
 ├── lite_rt/
-│   └── mobilevlm-q4.tflite
+│   └── gemma3/
+│       ├── <your-gemma3-model>.tflite
+│       └── encoder.json (任意)
 ```
 
 ### 3. 実際のllama.cppビルド（開発者向け）
