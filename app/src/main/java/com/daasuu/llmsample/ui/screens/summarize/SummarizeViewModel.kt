@@ -3,6 +3,7 @@ package com.daasuu.llmsample.ui.screens.summarize
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.LLMProvider
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -15,12 +16,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SummarizeViewModel @Inject constructor(
-    private val llmManager: LLMManager
+    private val llmManager: LLMManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     init {
+        // 永続化された選択に基づいて初期化・切替を行う
         viewModelScope.launch {
-            // 要約画面でも LLM を初期化
-            llmManager.initialize(LLMProvider.LLAMA_CPP)
+            settingsRepository.currentProvider.collect { provider ->
+                llmManager.setCurrentProvider(provider)
+            }
         }
     }
     
