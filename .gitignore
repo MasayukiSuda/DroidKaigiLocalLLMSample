@@ -45,5 +45,5 @@ vendor/
 .kotlin/
 
 # model weights
-app/src/main/assets/models/*.task
-app/src/main/assets/models/*.tflite
+*.task
+*.tflite
