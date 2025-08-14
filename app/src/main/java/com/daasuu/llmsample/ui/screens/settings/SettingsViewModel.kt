@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.ModelInfo
 import com.daasuu.llmsample.data.model_manager.ModelManager
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val modelManager: ModelManager,
-    private val llmManager: LLMManager
+    private val llmManager: LLMManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     
     private val _models = MutableStateFlow<List<ModelInfo>>(emptyList())
@@ -31,11 +33,14 @@ class SettingsViewModel @Inject constructor(
             modelManager.copyModelsFromAssets()
             refreshModels()
         }
-        
+
         refreshModels()
+
+        // 永続化されたプロバイダーを監視し、UIおよび LLM を同期
         viewModelScope.launch {
-            llmManager.currentProvider.collect { provider ->
+            settingsRepository.currentProvider.collect { provider ->
                 _selectedProvider.value = provider
+                llmManager.setCurrentProvider(provider)
             }
         }
     }
@@ -46,8 +51,8 @@ class SettingsViewModel @Inject constructor(
     
     fun selectProvider(provider: LLMProvider) {
         viewModelScope.launch {
-            llmManager.switchProvider(provider)
-            _selectedProvider.value = provider
+            // 永続化のみを行い、反映はフロー監視で一元化
+            settingsRepository.setCurrentProvider(provider)
         }
     }
     

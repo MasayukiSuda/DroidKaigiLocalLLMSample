@@ -53,6 +53,11 @@ class LLMManager @Inject constructor(
     suspend fun setCurrentProvider(provider: LLMProvider) {
         if (_currentProvider.value != provider) {
             switchProvider(provider)
+            return
+        }
+        // 同一プロバイダーでも未初期化なら初期化を実行
+        if (!_isInitialized.value) {
+            initialize(provider)
         }
     }
     

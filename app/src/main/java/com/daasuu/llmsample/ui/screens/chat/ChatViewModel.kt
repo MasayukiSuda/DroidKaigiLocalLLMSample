@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.ChatMessage
 import com.daasuu.llmsample.data.model.LLMProvider
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val llmManager: LLMManager
+    private val llmManager: LLMManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -31,9 +33,11 @@ class ChatViewModel @Inject constructor(
     }
     
     init {
+        // 永続化された選択に基づいて初期化・切替を行う
         viewModelScope.launch {
-            // Initialize with Llama.cpp
-            llmManager.initialize(LLMProvider.LLAMA_CPP)
+            settingsRepository.currentProvider.collect { provider ->
+                llmManager.setCurrentProvider(provider)
+            }
         }
     }
     
@@ -89,6 +93,7 @@ class ChatViewModel @Inject constructor(
                     content = "Error: ${e.message}",
                     isUser = false
                 )
+                println("errorMessage = ${errorMessage.content}")
                 _messages.value = _messages.value + errorMessage
             } finally {
                 _isLoading.value = false
