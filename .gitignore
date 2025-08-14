@@ -43,3 +43,7 @@ vendor/
 
 # Kotlin >= 2.0
 .kotlin/
+
+# model weights
+app/src/main/assets/models/*.task
+app/src/main/assets/models/*.tflite
