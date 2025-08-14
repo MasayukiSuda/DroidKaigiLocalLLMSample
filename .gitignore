@@ -47,3 +47,4 @@ vendor/
 # model weights
 *.task
 *.tflite
+*.model
