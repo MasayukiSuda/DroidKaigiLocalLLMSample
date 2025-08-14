@@ -2,6 +2,7 @@ package com.daasuu.llmsample.ui.screens.proofread
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -25,8 +26,17 @@ data class ProofreadCorrection(
 
 @HiltViewModel
 class ProofreadViewModel @Inject constructor(
-    private val llmManager: LLMManager
+    private val llmManager: LLMManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+    init {
+        // 永続化された選択に基づいて初期化・切替を行う
+        viewModelScope.launch {
+            settingsRepository.currentProvider.collect { provider ->
+                llmManager.setCurrentProvider(provider)
+            }
+        }
+    }
     
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
