@@ -15,13 +15,14 @@
 
 以下のモデルがダウンロード可能です：
 
-1. **TinyLlama 1.1B Q4** (推奨 - 軽量モデル)
+1. **Llama 3.2 3B Instruct Q4_K_M**（推奨）
+   - サイズ: 約2.3GB
+   - 用途: 高品質と端末負荷のバランスが良い
+   - ダウンロード元（参考）: [Hugging Face (bartowski)](https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf)
+
+2. **TinyLlama 1.1B Q4**（軽量モデル）
    - サイズ: 約640MB
    - 用途: 軽量で高速な推論、テスト用
-
-2. **Llama 2 7B Chat Q4** (大容量モデル)
-   - サイズ: 約3.8GB  
-   - 用途: より高品質な生成、本格的な利用
 
 3. **Phi-2 Q4**
    - サイズ: 約1.5GB
@@ -31,7 +32,7 @@
 
 - モデルファイルは大容量のため、Wi-Fi環境でのダウンロードを推奨します
 - ダウンロードしたモデルはアプリの内部ストレージに保存されます
-- ストレージ容量に注意してください（TinyLlamaで約640MB、Llama 2で約3.8GB必要）
+- ストレージ容量に注意してください（Llama 3.2で約2.3GB、TinyLlamaで約640MB など）
 - アプリをアンインストールするとダウンロードしたモデルも削除されます
 
 ## Session Proposal

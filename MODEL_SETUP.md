@@ -4,13 +4,13 @@
 
 ## 対応モデル
 
-### Llama.cpp (GGML形式)
-1. **TinyLlama 1.1B Q4** (推奨 - 軽量テスト用)
-   - サイズ: 約640MB
+### Llama.cpp (GGUF形式)
+1. **Llama 3.2 3B Instruct Q4_K_M**（推奨）
+   - サイズ: 約2.3GB
    - ダウンロード: アプリ内の設定画面から
 
-2. **Llama 2 7B Chat Q4**
-   - サイズ: 約3.8GB
+2. **TinyLlama 1.1B Q4**（軽量テスト用）
+   - サイズ: 約640MB
    - ダウンロード: アプリ内の設定画面から
 
 3. **Phi-2 Q4**
@@ -47,9 +47,9 @@
 ```
 /data/data/com.daasuu.llmsample/files/models/
 ├── llama_cpp/
-│   ├── tinyllama-1.1b-q4.bin
-│   ├── llama2-7b-chat-q4.bin
-│   └── phi-2-q4.bin
+│   ├── llama-3.2-3b-instruct-q4_k_m.gguf
+│   ├── tinyllama-1.1b-q4.gguf
+│   └── phi-2-q4.gguf
 ├── lite_rt/
 │   └── gemma3/
 │       ├── <your-gemma3-model>.tflite

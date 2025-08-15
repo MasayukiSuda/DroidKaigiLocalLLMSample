@@ -1,6 +1,5 @@
 package com.daasuu.llmsample.data.model_manager
 
-import kotlinx.coroutines.flow.Flow
 import android.content.Context
 import android.content.res.AssetManager
 import com.daasuu.llmsample.data.model.LLMProvider
@@ -19,9 +18,17 @@ class ModelManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelDownloader: ModelDownloader
 ) {
-    
+
     // 利用可能なモデルの定義
     private val availableModels = listOf(
+        ModelInfo(
+            id = "llama-3.2-3b-instruct-q4_k_m",
+            name = "Llama 3.2 3B Instruct Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+            fileSize = 2300000000L, // ~2.3GB (approx)
+            description = "Meta Llama 3.2 3B Instruct quantized to 4-bit (Q4_K_M)"
+        ),
         ModelInfo(
             id = "tinyllama-1.1b-q4",
             name = "TinyLlama 1.1B Q4",
@@ -31,14 +38,6 @@ class ModelManager @Inject constructor(
             description = "Lightweight TinyLlama model for quick testing"
         ),
         ModelInfo(
-            id = "llama2-7b-chat-q4",
-            name = "Llama 2 7B Chat Q4",
-            provider = LLMProvider.LLAMA_CPP,
-            downloadUrl = "https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_0.gguf",
-            fileSize = 3825373472L, // ~3.8GB
-            description = "Llama 2 7B model quantized to 4-bit for mobile devices"
-        ),
-        ModelInfo(
             id = "phi-2-q4",
             name = "Phi-2 Q4",
             provider = LLMProvider.LLAMA_CPP,
@@ -46,28 +45,8 @@ class ModelManager @Inject constructor(
             fileSize = 1610612736L, // ~1.5GB
             description = "Microsoft Phi-2 model quantized to 4-bit"
         ),
-        // LiteRT (TensorFlow Lite) sample model for download-run pipeline verification
-        // Note: This is a computer vision model (not NLP). We use it to validate download and loading path.
-        // LiteRTRepository keeps mock text generation for now.
-        ModelInfo(
-            id = "mobilenet-v1-1.0-224",
-            name = "MobileNet v1 1.0 224 (LiteRT sample)",
-            provider = LLMProvider.LITE_RT,
-            downloadUrl = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/gpu/mobilenet_v1_1.0_224.tflite",
-            fileSize = 17000000L, // ~17MB (approx)
-            description = "Sample TFLite model to verify LiteRT download and loading pipeline"
-        ),
-        // GPT-2 small (TFLite) for chat generation with LiteRT
-        ModelInfo(
-            id = "gpt2-small",
-            name = "GPT-2 Small (LiteRT)",
-            provider = LLMProvider.LITE_RT,
-            downloadUrl = "https://huggingface.co/openai-community/gpt2/resolve/main/pytorch_model.bin",
-            fileSize = 52428800L, // ~50MB
-            description = "GPT-2 Small converted to TFLite for on-device text generation"
-        )
     )
-    
+
     fun getAvailableModels(): List<ModelInfo> {
         return availableModels.map { model ->
             val localFile = getModelFile(model)
@@ -77,15 +56,15 @@ class ModelManager @Inject constructor(
             )
         }
     }
-    
+
     fun getModelsByProvider(provider: LLMProvider): List<ModelInfo> {
         return getAvailableModels().filter { it.provider == provider }
     }
-    
+
     suspend fun deleteModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
         val model = availableModels.find { it.id == modelId }
             ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
-        
+
         val localFile = getModelFile(model)
         if (localFile.exists()) {
             if (localFile.delete()) {
@@ -97,28 +76,28 @@ class ModelManager @Inject constructor(
             Result.success(Unit)
         }
     }
-    
+
     suspend fun downloadModel(
         modelId: String,
         onProgress: (ModelDownloader.DownloadProgress) -> Unit
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val model = availableModels.find { it.id == modelId }
             ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
-        
+
         val localFile = getModelFile(model)
-        
+
         // すでに存在する場合はスキップ
         if (localFile.exists()) {
             return@withContext Result.success(Unit)
         }
-        
+
         modelDownloader.downloadModel(
             url = model.downloadUrl,
             destinationFile = localFile,
             onProgress = onProgress
         ).map { Unit }
     }
-    
+
     private fun getModelFile(model: ModelInfo): File {
         val modelsDir = File(context.filesDir, "models")
         val providerDir = File(modelsDir, model.provider.name.lowercase())
@@ -134,19 +113,19 @@ class ModelManager @Inject constructor(
     suspend fun copyModelsFromAssets() = withContext(Dispatchers.IO) {
         try {
             val assetManager = context.assets
-            
+
             // llama_cppモデルをコピー
             copyModelsFromAssetsForProvider(assetManager, "models/llama_cpp", LLMProvider.LLAMA_CPP)
-            
+
             // lite_rtモデルをコピー
             copyModelsFromAssetsForProvider(assetManager, "models/lite_rt", LLMProvider.LITE_RT)
-            
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    
+
     private suspend fun copyModelsFromAssetsForProvider(
         assetManager: AssetManager,
         assetPath: String,
@@ -154,28 +133,28 @@ class ModelManager @Inject constructor(
     ) = withContext(Dispatchers.IO) {
         try {
             val files = assetManager.list(assetPath) ?: return@withContext
-            
+
             for (fileName in files) {
                 val fullAssetPath = "$assetPath/$fileName"
-                
+
                 // モデルIDを特定
                 val modelId = when {
+                    fileName.contains("llama-3.2-3b", ignoreCase = true) -> "llama-3.2-3b-instruct-q4_k_m"
                     fileName.contains("tinyllama", ignoreCase = true) -> "tinyllama-1.1b-q4"
-                    fileName.contains("llama2-7b", ignoreCase = true) -> "llama2-7b-chat-q4"
                     fileName.contains("phi-2", ignoreCase = true) -> "phi-2-q4"
                     fileName.contains("mobilevlm", ignoreCase = true) -> "mobilevlm-q4"
                     else -> continue
                 }
-                
+
                 val model = availableModels.find { it.id == modelId } ?: continue
                 val targetFile = getModelFile(model)
-                
+
                 // ファイルが既に存在する場合はスキップ
                 if (targetFile.exists()) continue
-                
+
                 // ディレクトリを作成
                 targetFile.parentFile?.mkdirs()
-                
+
                 // ファイルをコピー
                 assetManager.open(fullAssetPath).use { input ->
                     FileOutputStream(targetFile).use { output ->
