@@ -115,10 +115,10 @@ class ModelManager @Inject constructor(
             val assetManager = context.assets
 
             // llama_cppモデルをコピー
-            copyModelsFromAssetsForProvider(assetManager, "models/llama_cpp", LLMProvider.LLAMA_CPP)
+            copyModelsFromAssetsForProvider(assetManager, "models/llama_cpp")
 
             // lite_rtモデルをコピー
-            copyModelsFromAssetsForProvider(assetManager, "models/lite_rt", LLMProvider.LITE_RT)
+            copyModelsFromAssetsForProvider(assetManager, "models/lite_rt")
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -129,7 +129,6 @@ class ModelManager @Inject constructor(
     private suspend fun copyModelsFromAssetsForProvider(
         assetManager: AssetManager,
         assetPath: String,
-        provider: LLMProvider
     ) = withContext(Dispatchers.IO) {
         try {
             val files = assetManager.list(assetPath) ?: return@withContext
@@ -139,7 +138,11 @@ class ModelManager @Inject constructor(
 
                 // モデルIDを特定
                 val modelId = when {
-                    fileName.contains("llama-3.2-3b", ignoreCase = true) -> "llama-3.2-3b-instruct-q4_k_m"
+                    fileName.contains(
+                        "llama-3.2-3b",
+                        ignoreCase = true
+                    ) -> "llama-3.2-3b-instruct-q4_k_m"
+
                     fileName.contains("tinyllama", ignoreCase = true) -> "tinyllama-1.1b-q4"
                     fileName.contains("phi-2", ignoreCase = true) -> "phi-2-q4"
                     fileName.contains("mobilevlm", ignoreCase = true) -> "mobilevlm-q4"

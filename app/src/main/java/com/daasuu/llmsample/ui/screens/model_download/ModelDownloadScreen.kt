@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.daasuu.llmsample.data.model.ModelInfo
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelDownloadScreen(
     viewModel: ModelDownloadViewModel = hiltViewModel(),
@@ -23,33 +22,18 @@ fun ModelDownloadScreen(
     val models by viewModel.models.collectAsState()
     val downloadingModels by viewModel.downloadingModels.collectAsState()
     
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("モデル管理") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
-                    }
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(models) { model ->
+            ModelItem(
+                model = model,
+                downloadProgress = downloadingModels[model.id],
+                onDownloadClick = { viewModel.downloadModel(model.id) },
+                onDeleteClick = { viewModel.deleteModel(model.id) }
             )
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(models) { model ->
-                ModelItem(
-                    model = model,
-                    downloadProgress = downloadingModels[model.id],
-                    onDownloadClick = { viewModel.downloadModel(model.id) },
-                    onDeleteClick = { viewModel.deleteModel(model.id) }
-                )
-            }
         }
     }
 }

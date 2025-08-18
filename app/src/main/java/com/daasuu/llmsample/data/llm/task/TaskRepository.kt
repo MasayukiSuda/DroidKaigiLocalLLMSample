@@ -56,13 +56,13 @@ class TaskRepository @Inject constructor(
         val generated = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
         if (generated != null) {
             generated.split(" ").forEach { token ->
-                send(token + " ")
+                send("$token ")
                 delay(12)
             }
         } else {
             Log.w(TAG, "MediaPipe generate failed; falling back to mock")
             withContext(Dispatchers.IO) {
-                ("[task mock] Gemma3: " + prompt).split(" ").forEach {
+                ("[task mock] Gemma3: $prompt").split(" ").forEach {
                     send(it + " ")
                     delay(20)
                 }

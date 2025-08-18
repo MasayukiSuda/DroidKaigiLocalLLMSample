@@ -7,29 +7,40 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.daasuu.llmsample.ui.navigation.AppNavigation
 import com.daasuu.llmsample.ui.navigation.BottomNavItem
-import com.daasuu.llmsample.ui.screens.settings.SettingsScreen
 import com.daasuu.llmsample.ui.screens.benchmark.BenchmarkDashboardScreen
 import com.daasuu.llmsample.ui.screens.model_download.ModelDownloadScreen
+import com.daasuu.llmsample.ui.screens.settings.SettingsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,9 +51,9 @@ fun MainScreen() {
         BottomNavItem.Summarize,
         BottomNavItem.Proofread
     )
-    
+
     // We'll inject the BenchmarkReportExporter in the BenchmarkDashboardScreen instead
-    
+
     var showSettings by remember { mutableStateOf(false) }
     var showBenchmark by remember { mutableStateOf(false) }
     var showModelDownload by remember { mutableStateOf(false) }
@@ -96,10 +107,10 @@ fun MainScreen() {
             AppNavigation(navController = navController)
         }
     }
-    
+
     // Settings modal
     if (showSettings) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { showSettings = false },
             title = {
                 Text("設定")
@@ -115,7 +126,7 @@ fun MainScreen() {
             modifier = Modifier.fillMaxWidth()
         )
     }
-    
+
     // Benchmark modal
     if (showBenchmark) {
         androidx.compose.ui.window.Dialog(
@@ -124,7 +135,7 @@ fun MainScreen() {
                 usePlatformDefaultWidth = false // フルスクリーンダイアログ
             )
         ) {
-            androidx.compose.material3.Card(
+            Card(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
@@ -150,7 +161,7 @@ fun MainScreen() {
                             Text("閉じる")
                         }
                     }
-                    
+
                     // ベンチマーク内容
                     BenchmarkDashboardScreen(
                         onBack = { showBenchmark = false }
@@ -159,13 +170,48 @@ fun MainScreen() {
             }
         }
     }
-    
+
     // Model download modal
     if (showModelDownload) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            ModelDownloadScreen(
-                onBackClick = { showModelDownload = false }
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showModelDownload = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false // フルスクリーンダイアログ
             )
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // ダイアログヘッダー
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "モデル管理",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(onClick = { showModelDownload = false }) {
+                            Text("閉じる")
+                        }
+                    }
+
+                    // モデルダウンロード内容
+                    ModelDownloadScreen(
+                        onBackClick = { showModelDownload = false }
+                    )
+                }
+            }
         }
     }
 }
