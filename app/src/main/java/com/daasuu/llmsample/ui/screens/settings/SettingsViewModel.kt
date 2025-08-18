@@ -25,7 +25,7 @@ class SettingsViewModel @Inject constructor(
     private val _models = MutableStateFlow<List<ModelInfo>>(emptyList())
     val models: StateFlow<List<ModelInfo>> = _models.asStateFlow()
     
-    private val _selectedProvider = MutableStateFlow(LLMProvider.LLAMA_CPP)
+    private val _selectedProvider = MutableStateFlow(LLMProvider.LITE_RT)
     val selectedProvider: StateFlow<LLMProvider> = _selectedProvider.asStateFlow()
     
     init {

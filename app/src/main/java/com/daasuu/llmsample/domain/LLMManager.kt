@@ -16,7 +16,7 @@ class LLMManager @Inject constructor(
     private val repositories: Map<LLMProvider, @JvmSuppressWildcards LLMRepository>
 ) {
     
-    private val _currentProvider = MutableStateFlow(LLMProvider.LLAMA_CPP)
+    private val _currentProvider = MutableStateFlow(LLMProvider.LITE_RT)
     val currentProvider: StateFlow<LLMProvider> = _currentProvider.asStateFlow()
     
     private val _isInitialized = MutableStateFlow(false)
@@ -46,16 +46,19 @@ class LLMManager @Inject constructor(
     }
     
     suspend fun generateChatResponse(prompt: String): Flow<String> {
+        ensureInitialized()
         return getCurrentRepository()?.generateChatResponse(prompt) 
             ?: throw IllegalStateException("No repository available for current provider")
     }
     
     suspend fun summarizeText(text: String): Flow<String> {
+        ensureInitialized()
         return getCurrentRepository()?.summarizeText(text)
             ?: throw IllegalStateException("No repository available for current provider")
     }
     
     suspend fun proofreadText(text: String): Flow<String> {
+        ensureInitialized()
         return getCurrentRepository()?.proofreadText(text)
             ?: throw IllegalStateException("No repository available for current provider")
     }
@@ -66,12 +69,21 @@ class LLMManager @Inject constructor(
                 // Release current provider
                 getCurrentRepository()?.release()
                 
-                // Initialize new provider
-                initialize(provider)
-            } else if (!_isInitialized.value) {
-                // 同一プロバイダーでも未初期化なら初期化を実行
-                initialize(provider)
+                // プロバイダーを変更（初期化は遅延実行）
+                _currentProvider.value = provider
+                _isInitialized.value = false
             }
+            // 必要に応じて初期化（実際の使用時に遅延実行）
+            // initialize(provider) は必要時に実行
+        }
+    }
+    
+    /**
+     * 必要時に初期化を実行
+     */
+    private suspend fun ensureInitialized() {
+        if (!_isInitialized.value) {
+            initialize(_currentProvider.value)
         }
     }
     
@@ -111,11 +123,13 @@ class LLMManager @Inject constructor(
         taskType: TaskType,
         input: String
     ): Flow<String> {
+        // ベンチマーク実行時は確実に初期化
+        ensureInitialized()
         return when (taskType) {
-            TaskType.CHAT -> generateChatResponse(input)
-            TaskType.SUMMARIZATION -> summarizeText(input)
-            TaskType.PROOFREADING -> proofreadText(input)
-        }
+            TaskType.CHAT -> getCurrentRepository()?.generateChatResponse(input)
+            TaskType.SUMMARIZATION -> getCurrentRepository()?.summarizeText(input)
+            TaskType.PROOFREADING -> getCurrentRepository()?.proofreadText(input)
+        } ?: throw IllegalStateException("No repository available for current provider")
     }
     
     fun getCurrentModelName(): String? {

@@ -29,10 +29,7 @@ class BenchmarkViewModel @Inject constructor(
     val progress = benchmarkRepository.progress
     val results = benchmarkRepository.results
     
-    // 追加: セッション履歴と全結果の管理
-    private val _sessionHistory = MutableStateFlow<List<BenchmarkSession>>(emptyList())
-    val sessionHistory: StateFlow<List<BenchmarkSession>> = _sessionHistory.asStateFlow()
-    
+    // 全結果の管理（履歴機能は削除）
     private val _allResults = MutableStateFlow<List<BenchmarkResult>>(emptyList())
     val allResults: StateFlow<List<BenchmarkResult>> = _allResults.asStateFlow()
     
@@ -64,12 +61,7 @@ class BenchmarkViewModel @Inject constructor(
                     _allResults.value = currentAllResults
                 }
                 
-                // Update session history when session completes
-                session?.let { currentSession ->
-                    if (currentSession.isCompleted && !_sessionHistory.value.any { it.id == currentSession.id }) {
-                        _sessionHistory.value = _sessionHistory.value + currentSession
-                    }
-                }
+                // セッション履歴機能は削除済み
                 
                 _uiState.value.copy(
                     currentSession = session,
@@ -223,6 +215,7 @@ class BenchmarkViewModel @Inject constructor(
      */
     fun clearResults() {
         benchmarkRepository.clearResults()
+        _allResults.value = emptyList()
         _uiState.value = _uiState.value.copy(
             currentSession = null,
             results = emptyList(),

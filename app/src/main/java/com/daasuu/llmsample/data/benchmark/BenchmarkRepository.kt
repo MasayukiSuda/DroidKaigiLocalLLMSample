@@ -198,8 +198,19 @@ class BenchmarkRepository @Inject constructor(
         testCase: BenchmarkTestCase,
         provider: LLMProvider
     ): BenchmarkResult {
+        android.util.Log.d("BenchmarkRepository", "Starting benchmark for provider: ${provider.displayName}")
+        
+        // ベースラインメモリを記録
+        val memoryBeforeProvider = performanceMonitor.getCurrentMemoryUsage()
+        android.util.Log.d("BenchmarkRepository", "Memory before provider init: ${memoryBeforeProvider}MB")
+        
         // プロバイダーの準備（ベンチマーク専用メソッドを使用）
         llmManager.setProviderForBenchmark(provider)
+        
+        // プロバイダー初期化後のメモリを記録
+        val memoryAfterProvider = performanceMonitor.getCurrentMemoryUsage()
+        val providerMemoryUsage = memoryAfterProvider - memoryBeforeProvider
+        android.util.Log.d("BenchmarkRepository", "Memory after provider init: ${memoryAfterProvider}MB (delta: +${providerMemoryUsage}MB)")
         
         // パフォーマンス監視開始
         performanceMonitor.startMonitoring()
@@ -251,7 +262,7 @@ class BenchmarkRepository @Inject constructor(
                 modelSizeMB = llmManager.getCurrentModelSize(),
                 peakMemoryUsageMB = performanceMonitor.getPeakMemoryUsage(),
                 averageMemoryUsageMB = performanceMonitor.getAverageMemoryUsage(),
-                memoryIncreaseMB = performanceMonitor.getMemoryIncrease(),
+                memoryIncreaseMB = maxOf(providerMemoryUsage, performanceMonitor.getMemoryIncrease()),
                 availableMemoryMB = performanceMonitor.getCurrentMemoryUsage(),
                 totalMemoryMB = performanceMonitor.getDeviceInfo().totalRamMB
             )

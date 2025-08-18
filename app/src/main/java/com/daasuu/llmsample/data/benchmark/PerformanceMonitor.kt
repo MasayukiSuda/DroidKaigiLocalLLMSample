@@ -44,6 +44,9 @@ class PerformanceMonitor @Inject constructor(
         baselineMemory = getCurrentMemoryUsage()
         baselineBatteryLevel = getCurrentBatteryLevel()
         memorySnapshots.clear()
+        
+        // ベースラインメモリを記録
+        android.util.Log.d("PerformanceMonitor", "Baseline memory: ${baselineMemory}MB")
     }
     
     /**

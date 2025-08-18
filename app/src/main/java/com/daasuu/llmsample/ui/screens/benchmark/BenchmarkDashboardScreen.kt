@@ -40,7 +40,6 @@ fun BenchmarkDashboardScreen(
     }
     
     val currentSession by viewModel.currentSession.collectAsState()
-    val sessionHistory by viewModel.sessionHistory.collectAsState()
     val allResults by viewModel.allResults.collectAsState()
     val isRunning by viewModel.isRunning.collectAsState()
     
@@ -71,12 +70,12 @@ fun BenchmarkDashboardScreen(
             }
         )
         
-        // Tab Navigation
+        // Tab Navigation (履歴タブを削除してシンプル化)
         TabRow(selectedTabIndex = selectedTab) {
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text("現在のセッション") },
+                text = { Text("ベンチマーク実行") },
                 icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) }
             )
             Tab(
@@ -85,15 +84,9 @@ fun BenchmarkDashboardScreen(
                 text = { Text("結果分析") },
                 icon = { Icon(Icons.Default.Analytics, contentDescription = null) }
             )
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
-                text = { Text("履歴") },
-                icon = { Icon(Icons.Default.History, contentDescription = null) }
-            )
         }
         
-        // Tab Content
+        // Tab Content (2タブ制にシンプル化)
         when (selectedTab) {
             0 -> CurrentSessionTab(
                 session = currentSession,
@@ -107,11 +100,6 @@ fun BenchmarkDashboardScreen(
             )
             1 -> ResultsAnalysisTab(
                 results = allResults,
-                modifier = Modifier.fillMaxSize()
-            )
-            2 -> SessionHistoryTab(
-                sessions = sessionHistory,
-                onSessionClick = { /* TODO: Show session details */ },
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -295,51 +283,7 @@ fun ResultsAnalysisTab(
     )
 }
 
-@Composable
-fun SessionHistoryTab(
-    sessions: List<BenchmarkSession>,
-    onSessionClick: (BenchmarkSession) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Text(
-                text = "過去のセッション",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        
-        if (sessions.isEmpty()) {
-            item {
-                Card {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "過去のセッションがありません",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        } else {
-            items(sessions) { session ->
-                SessionHistoryCard(
-                    session = session,
-                    onClick = { onSessionClick(session) }
-                )
-            }
-        }
-    }
-}
+// SessionHistoryTab を削除（実用性が低いため）
 
 @Composable
 fun BenchmarkActionButton(
@@ -480,44 +424,7 @@ fun DashboardBenchmarkResultCard(
     }
 }
 
-@Composable
-fun SessionHistoryCard(
-    session: BenchmarkSession,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = session.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${session.results.size} 結果",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            Text(
-                text = session.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-    }
-}
+// SessionHistoryCard も削除（SessionHistoryTab と一緒に不要）
 
 @Composable
 fun ExportOptionsDialog(

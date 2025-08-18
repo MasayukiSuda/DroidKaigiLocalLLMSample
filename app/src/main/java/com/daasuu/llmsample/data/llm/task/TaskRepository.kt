@@ -194,8 +194,8 @@ class TaskRepository @Inject constructor(
                                 arrayOf(String::class.java)
                             )
                         }
-                        if (setModelPath2 != null) setModelPath2.invoke(optBuilder, modelPath)
-                        if (setModelAssetPath2 != null) setModelAssetPath2.invoke(
+                        setModelPath2?.invoke(optBuilder, modelPath)
+                        setModelAssetPath2?.invoke(
                             optBuilder,
                             assetRelative
                         )
@@ -232,8 +232,8 @@ class TaskRepository @Inject constructor(
                 val setModelAssetPath = baseBuilder.javaClass.methods.firstOrNull {
                     it.name == "setModelAssetPath" && it.parameterTypes.contentEquals(arrayOf(String::class.java))
                 }
-                if (setModelPath != null) setModelPath.invoke(baseBuilder, modelPath)
-                if (setModelAssetPath != null) setModelAssetPath.invoke(baseBuilder, assetRelative)
+                setModelPath?.invoke(baseBuilder, modelPath)
+                setModelAssetPath?.invoke(baseBuilder, assetRelative)
                 val baseBuilt = baseBuilder.javaClass.getMethod("build").invoke(baseBuilder)
 
                 val optionsClass = Class.forName(optCls)

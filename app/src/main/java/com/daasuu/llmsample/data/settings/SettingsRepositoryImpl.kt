@@ -26,8 +26,8 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override val currentProvider: Flow<LLMProvider> =
         context.dataStore.data.map { prefs ->
-            val ordinal = prefs[Keys.CURRENT_PROVIDER] ?: LLMProvider.LLAMA_CPP.ordinal
-            LLMProvider.entries.getOrNull(ordinal) ?: LLMProvider.LLAMA_CPP
+            val ordinal = prefs[Keys.CURRENT_PROVIDER] ?: LLMProvider.LITE_RT.ordinal
+            LLMProvider.entries.getOrNull(ordinal) ?: LLMProvider.LITE_RT
         }
 
     override suspend fun setCurrentProvider(provider: LLMProvider) {
