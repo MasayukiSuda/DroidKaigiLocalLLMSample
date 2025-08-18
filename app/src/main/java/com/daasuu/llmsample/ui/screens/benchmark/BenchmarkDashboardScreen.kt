@@ -50,25 +50,42 @@ fun BenchmarkDashboardScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        TopAppBar(
-            title = { Text("ベンチマークダッシュボード") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
-                }
-            },
-            actions = {
-                IconButton(
-                    onClick = { showExportDialog = true },
-                    enabled = allResults.isNotEmpty() && !isExporting
-                ) {
-                    Icon(
-                        imageVector = if (isExporting) Icons.Default.Schedule else Icons.Default.FileDownload,
-                        contentDescription = "エクスポート"
-                    )
+        // ヘッダー部分をシンプルなタイトルに変更（戻るボタンとダウンロードボタンを削除）
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "ベンチマークダッシュボード",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                // エクスポートボタンのみ残す（シンプルなテキストボタンに変更）
+                if (allResults.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showExportDialog = true },
+                        enabled = !isExporting
+                    ) {
+                        Icon(
+                            imageVector = if (isExporting) Icons.Default.Schedule else Icons.Default.FileDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("エクスポート")
+                    }
                 }
             }
-        )
+        }
         
         // Tab Navigation (履歴タブを削除してシンプル化)
         TabRow(selectedTabIndex = selectedTab) {

@@ -1,7 +1,15 @@
 package com.daasuu.llmsample.ui.screens.settings
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -9,8 +17,17 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -26,7 +43,7 @@ fun SettingsScreen(
 ) {
     val models by viewModel.models.collectAsState()
     val selectedProvider by viewModel.selectedProvider.collectAsState()
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,7 +55,7 @@ fun SettingsScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        
+
         // モデル配置の説明
         Card(
             modifier = Modifier
@@ -74,7 +91,7 @@ fun SettingsScreen(
                 }
             }
         }
-        
+
         // Provider selection
         Card(
             modifier = Modifier
@@ -89,7 +106,7 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 LLMProvider.entries.forEach { provider ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -107,7 +124,7 @@ fun SettingsScreen(
                 }
             }
         }
-        
+
         // Models list
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -163,7 +180,7 @@ fun ModelCard(
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
-                
+
                 when {
                     model.isDownloaded -> {
                         Row {
@@ -183,6 +200,7 @@ fun ModelCard(
                             }
                         }
                     }
+
                     else -> {
                         Icon(
                             Icons.Default.ErrorOutline,
@@ -193,7 +211,7 @@ fun ModelCard(
                     }
                 }
             }
-            
+
             when {
                 model.isDownloaded -> {
                     Text(
@@ -203,6 +221,7 @@ fun ModelCard(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+
                 else -> {
                     Column(
                         modifier = Modifier.padding(top = 8.dp)
@@ -235,15 +254,16 @@ fun ModelCard(
     }
 }
 
+@SuppressLint("DefaultLocale")
 private fun formatFileSize(bytes: Long): String {
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var size = bytes.toFloat()
     var unitIndex = 0
-    
+
     while (size >= 1024 && unitIndex < units.size - 1) {
         size /= 1024
         unitIndex++
     }
-    
+
     return String.format("%.1f %s", size, units[unitIndex])
 }

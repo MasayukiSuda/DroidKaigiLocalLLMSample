@@ -1,9 +1,15 @@
 package com.daasuu.llmsample.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,7 +20,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -50,15 +55,7 @@ fun MainScreen() {
                     IconButton(onClick = { showModelDownload = true }) {
                         Icon(Icons.Default.Download, contentDescription = "モデル管理")
                     }
-                    IconButton(onClick = {
-                        navController.navigate("benchmark") {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }) {
+                    IconButton(onClick = { showBenchmark = true }) {
                         Icon(Icons.Default.Speed, contentDescription = "ベンチマーク")
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -119,7 +116,49 @@ fun MainScreen() {
         )
     }
     
-    // Benchmarkはボトムナビ/トップバーから画面遷移するためモーダルは削除
+    // Benchmark modal
+    if (showBenchmark) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showBenchmark = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false // フルスクリーンダイアログ
+            )
+        ) {
+            androidx.compose.material3.Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // ダイアログヘッダー
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ベンチマーク",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        TextButton(onClick = { showBenchmark = false }) {
+                            Text("閉じる")
+                        }
+                    }
+                    
+                    // ベンチマーク内容
+                    BenchmarkDashboardScreen(
+                        onBack = { showBenchmark = false }
+                    )
+                }
+            }
+        }
+    }
     
     // Model download modal
     if (showModelDownload) {

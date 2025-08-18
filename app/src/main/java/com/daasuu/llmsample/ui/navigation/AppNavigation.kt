@@ -27,10 +27,6 @@ fun AppNavigation(
         composable(BottomNavItem.Proofread.route) {
             ProofreadScreen()
         }
-        composable("benchmark") {
-            BenchmarkDashboardScreen(
-                onBack = { /* No-op when opened from bottom nav */ }
-            )
-        }
+        // benchmarkルートは削除（ダイアログ化のため）
     }
 }
