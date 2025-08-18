@@ -198,8 +198,24 @@ class BenchmarkViewModel @Inject constructor(
      * ベンチマークを停止
      */
     fun stopBenchmark() {
-        benchmarkRepository.stopBenchmarkSession()
-        _uiState.value = _uiState.value.copy(isLoading = false)
+        android.util.Log.d("BenchmarkViewModel", "stopBenchmark() called")
+        viewModelScope.launch {
+            try {
+                android.util.Log.d("BenchmarkViewModel", "Calling benchmarkRepository.stopBenchmarkSession()")
+                benchmarkRepository.stopBenchmarkSession()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = null
+                )
+                android.util.Log.d("BenchmarkViewModel", "Benchmark stopped successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("BenchmarkViewModel", "Failed to stop benchmark", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "ベンチマーク停止に失敗しました: ${e.message}"
+                )
+            }
+        }
     }
     
     /**

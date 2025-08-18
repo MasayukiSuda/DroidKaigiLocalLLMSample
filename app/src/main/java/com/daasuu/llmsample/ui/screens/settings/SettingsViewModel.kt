@@ -18,7 +18,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val modelManager: ModelManager,
     private val llmManager: LLMManager,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val interferenceMonitor: com.daasuu.llmsample.data.benchmark.InterferenceMonitor
 ) : ViewModel() {
     
     private val _models = MutableStateFlow<List<ModelInfo>>(emptyList())
@@ -50,6 +51,11 @@ class SettingsViewModel @Inject constructor(
     }
     
     fun selectProvider(provider: LLMProvider) {
+        // ユーザーアクションを記録
+        interferenceMonitor.recordUserAction(
+            com.daasuu.llmsample.data.benchmark.UserActionType.PROVIDER_SWITCH
+        )
+        
         viewModelScope.launch {
             // 永続化のみを行い、反映はフロー監視で一元化
             settingsRepository.setCurrentProvider(provider)

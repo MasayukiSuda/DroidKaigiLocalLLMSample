@@ -16,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val llmManager: LLMManager,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val interferenceMonitor: com.daasuu.llmsample.data.benchmark.InterferenceMonitor
 ) : ViewModel() {
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -44,6 +45,11 @@ class ChatViewModel @Inject constructor(
     fun sendMessage() {
         val text = _inputText.value.trim()
         if (text.isBlank()) return
+        
+        // ユーザーアクションを記録
+        interferenceMonitor.recordUserAction(
+            com.daasuu.llmsample.data.benchmark.UserActionType.CHAT_MESSAGE
+        )
         
         viewModelScope.launch {
             // Add user message

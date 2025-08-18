@@ -65,7 +65,10 @@ data class LatencyMetrics(
     val tokensPerSecond: Double, // トークン生成速度 (tokens/sec)
     val totalTokens: Int, // 生成されたトークン数
     val promptTokens: Int, // プロンプトのトークン数
-    val averageTokenLatency: Double = if (totalTokens > 0) totalLatency.toDouble() / totalTokens else 0.0
+    val averageTokenLatency: Double = if (totalTokens > 0) totalLatency.toDouble() / totalTokens else 0.0,
+    val userInterferenceDetected: Boolean = false, // ユーザー操作による干渉を検知
+    val baselineDeviation: Float = 0f, // ベースライン性能からの偏差（%）
+    val concurrentUserActions: Int = 0 // 並行して実行されたユーザー操作数
 )
 
 /**

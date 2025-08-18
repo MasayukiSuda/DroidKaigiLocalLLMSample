@@ -63,6 +63,27 @@ fun BenchmarkScreen(
         if (progress.isRunning) {
             BenchmarkProgressCard(progress = progress)
             Spacer(modifier = Modifier.height(16.dp))
+        } else if (progress.currentTestCase == "停止済み") {
+            // 停止状態の表示
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "ベンチマークが停止されました",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         // エラーメッセージ
@@ -132,7 +153,10 @@ private fun BenchmarkControls(
 
             if (isRunning) {
                 Button(
-                    onClick = onStop,
+                    onClick = {
+                        android.util.Log.d("BenchmarkScreen", "Stop button clicked")
+                        onStop()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -418,6 +442,29 @@ private fun BenchmarkResultCard(
                         label = "トークン数",
                         value = "${result.qualityMetrics.outputTokens}"
                     )
+                }
+                
+                // 干渉情報も表示
+                if (result.latencyMetrics.userInterferenceDetected) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        MetricItem(
+                            label = "ユーザー干渉",
+                            value = "検知済み"
+                        )
+                        MetricItem(
+                            label = "偏差",
+                            value = "${String.format("%.1f", result.latencyMetrics.baselineDeviation)}%"
+                        )
+                        MetricItem(
+                            label = "同時操作",
+                            value = "${result.latencyMetrics.concurrentUserActions}回"
+                        )
+                    }
                 }
             } else {
                 result.errorMessage?.let { error ->

@@ -1,10 +1,13 @@
 package com.daasuu.llmsample.domain
 
 import com.daasuu.llmsample.data.model.LLMProvider
+import com.daasuu.llmsample.data.model.TaskType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +21,13 @@ class LLMManager @Inject constructor(
     
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
+    
+    // ベンチマーク実行中フラグ
+    private val _isBenchmarkRunning = MutableStateFlow(false)
+    val isBenchmarkRunning: StateFlow<Boolean> = _isBenchmarkRunning.asStateFlow()
+    
+    // プロバイダー切り替えの排他制御
+    private val providerSwitchMutex = kotlinx.coroutines.sync.Mutex()
     
     suspend fun initialize(provider: LLMProvider) {
         repositories[provider]?.let { repo ->
@@ -51,13 +61,60 @@ class LLMManager @Inject constructor(
     }
     
     suspend fun setCurrentProvider(provider: LLMProvider) {
-        if (_currentProvider.value != provider) {
-            switchProvider(provider)
-            return
+        providerSwitchMutex.withLock {
+            if (_currentProvider.value != provider) {
+                // Release current provider
+                getCurrentRepository()?.release()
+                
+                // Initialize new provider
+                initialize(provider)
+            } else if (!_isInitialized.value) {
+                // 同一プロバイダーでも未初期化なら初期化を実行
+                initialize(provider)
+            }
         }
-        // 同一プロバイダーでも未初期化なら初期化を実行
-        if (!_isInitialized.value) {
-            initialize(provider)
+    }
+    
+    /**
+     * ベンチマーク専用のプロバイダー設定（低優先度で実行）
+     */
+    suspend fun setProviderForBenchmark(provider: LLMProvider) {
+        // ベンチマーク実行フラグを設定
+        _isBenchmarkRunning.value = true
+        
+        // ユーザー操作が進行中の場合は少し待機
+        providerSwitchMutex.withLock {
+            if (_currentProvider.value != provider) {
+                // 現在のリポジトリを保持（ユーザー操作用）
+                val userRepository = getCurrentRepository()
+                
+                // ベンチマーク用のプロバイダーを初期化
+                initialize(provider)
+            }
+        }
+    }
+    
+    /**
+     * ベンチマーク終了時の処理
+     */
+    suspend fun finishBenchmark() {
+        _isBenchmarkRunning.value = false
+        
+        // 元のプロバイダーに戻す処理は必要に応じて実装
+        // 現在は最後に使用されたプロバイダーのままにしておく
+    }
+    
+    /**
+     * ユーザー操作による影響を考慮したベンチマーク用タスク実行
+     */
+    suspend fun generateForBenchmark(
+        taskType: TaskType,
+        input: String
+    ): Flow<String> {
+        return when (taskType) {
+            TaskType.CHAT -> generateChatResponse(input)
+            TaskType.SUMMARIZATION -> summarizeText(input)
+            TaskType.PROOFREADING -> proofreadText(input)
         }
     }
     

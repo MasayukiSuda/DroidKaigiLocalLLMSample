@@ -47,14 +47,18 @@ class PerformanceMonitor @Inject constructor(
     }
     
     /**
-     * メモリ使用量の継続監視
+     * メモリ使用量の継続監視（効率化版）
      */
     fun monitorMemoryUsage(): Flow<Long> = flow {
-        while (true) {
+        var sampleCount = 0
+        val maxSamples = 300 // 最大5分間のサンプリング（1秒間隔）
+        
+        while (sampleCount < maxSamples) {
             val memoryUsage = getCurrentMemoryUsage()
             memorySnapshots.add(memoryUsage)
             emit(memoryUsage)
-            delay(100) // 100ms間隔でサンプリング
+            sampleCount++
+            delay(1000) // 1秒間隔に変更してリソース使用量を削減
         }
     }
     
@@ -270,5 +274,12 @@ class PerformanceMonitor @Inject constructor(
             "maxMemory" to runtime.maxMemory(),
             "usedMemory" to (runtime.totalMemory() - runtime.freeMemory())
         )
+    }
+    
+    /**
+     * メモリ監視データをクリア
+     */
+    fun clearMonitoringData() {
+        memorySnapshots.clear()
     }
 }

@@ -25,9 +25,11 @@ import javax.inject.Singleton
 @Singleton
 class BenchmarkRepository @Inject constructor(
     private val llmManager: LLMManager,
-    private val performanceMonitor: PerformanceMonitor
+    private val performanceMonitor: PerformanceMonitor,
+    private val interferenceMonitor: InterferenceMonitor
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // ユーザー操作を妨げない低優先度スコープ
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     private val _currentSession = MutableStateFlow<BenchmarkSession?>(null)
     val currentSession: StateFlow<BenchmarkSession?> = _currentSession.asStateFlow()
@@ -59,7 +61,10 @@ class BenchmarkRepository @Inject constructor(
         _results.value = emptyList()
         _progress.value = BenchmarkProgress()
         
-        scope.launch {
+        // 干渉監視を開始
+        interferenceMonitor.startBenchmarkMonitoring()
+        
+        backgroundScope.launch {
             try {
                 runBenchmarkSession(startedSession)
             } catch (e: Exception) {
@@ -76,14 +81,48 @@ class BenchmarkRepository @Inject constructor(
      * ベンチマークセッションを停止
      */
     fun stopBenchmarkSession() {
-        scope.coroutineContext.cancelChildren()
+        android.util.Log.d("BenchmarkRepository", "stopBenchmarkSession() called")
+        
+        // 実行中でない場合は何もしない
+        val currentSession = _currentSession.value
+        android.util.Log.d("BenchmarkRepository", "Current session status: ${currentSession?.status}")
+        
+        if (currentSession?.status != BenchmarkStatus.RUNNING) {
+            android.util.Log.d("BenchmarkRepository", "No running session to stop")
+            return
+        }
+        
+        android.util.Log.d("BenchmarkRepository", "Stopping benchmark session")
+        
+        // 進行中のタスクをキャンセル
+        backgroundScope.coroutineContext.cancelChildren()
         memoryMonitoringJob?.cancel()
         
+        // セッション状態を更新
         _currentSession.value?.let { session ->
             _currentSession.value = session.copy(
                 status = BenchmarkStatus.CANCELLED,
                 endTime = System.currentTimeMillis()
             )
+            android.util.Log.d("BenchmarkRepository", "Session status updated to CANCELLED")
+        }
+        
+        // プログレス状態を即座に停止状態に更新
+        val currentProgress = _progress.value
+        _progress.value = currentProgress.copy(
+            isRunning = false,
+            isCompleted = false,
+            currentTestCase = "停止済み",
+            currentProvider = ""
+        )
+        android.util.Log.d("BenchmarkRepository", "Progress state updated to stopped")
+        
+        // ベンチマーク終了処理
+        backgroundScope.launch {
+            llmManager.finishBenchmark()
+            performanceMonitor.clearMonitoringData()
+            interferenceMonitor.clearMonitoring()
+            android.util.Log.d("BenchmarkRepository", "Cleanup completed")
         }
     }
     
@@ -127,8 +166,8 @@ class BenchmarkRepository @Inject constructor(
                     completedTests++
                 }
                 
-                // テスト間の間隔を設ける
-                delay(1000)
+                // テスト間の間隔を設ける（ユーザー操作を妨げないよう適度な間隔）
+                delay(2000) // 2秒間隔に拡大してユーザー操作の優先度を確保
             }
         }
         
@@ -145,6 +184,11 @@ class BenchmarkRepository @Inject constructor(
             isRunning = false,
             isCompleted = true
         )
+        
+        // ベンチマーク終了処理
+        llmManager.finishBenchmark()
+        performanceMonitor.clearMonitoringData()
+        interferenceMonitor.clearMonitoring()
     }
     
     /**
@@ -154,15 +198,15 @@ class BenchmarkRepository @Inject constructor(
         testCase: BenchmarkTestCase,
         provider: LLMProvider
     ): BenchmarkResult {
-        // プロバイダーの準備
-        llmManager.setCurrentProvider(provider)
+        // プロバイダーの準備（ベンチマーク専用メソッドを使用）
+        llmManager.setProviderForBenchmark(provider)
         
         // パフォーマンス監視開始
         performanceMonitor.startMonitoring()
         
-        // メモリ監視の開始
+        // メモリ監視の開始（低優先度で実行）
         memoryMonitoringJob?.cancel()
-        memoryMonitoringJob = scope.launch {
+        memoryMonitoringJob = backgroundScope.launch {
             performanceMonitor.monitorMemoryUsage().collectLatest { /* メモリサンプリング */ }
         }
         
@@ -172,12 +216,8 @@ class BenchmarkRepository @Inject constructor(
         val tokens = mutableListOf<String>()
         
         try {
-            // LLMの実行
-            val outputFlow = when (testCase.taskType) {
-                TaskType.CHAT -> llmManager.generateChatResponse(testCase.inputText)
-                TaskType.SUMMARIZATION -> llmManager.summarizeText(testCase.inputText)
-                TaskType.PROOFREADING -> llmManager.proofreadText(testCase.inputText)
-            }
+            // ベンチマーク専用のLLM実行（ユーザー操作による影響も含めて測定）
+            val outputFlow = llmManager.generateForBenchmark(testCase.taskType, testCase.inputText)
             
             val outputBuilder = StringBuilder()
             outputFlow.collect { token ->
@@ -192,13 +232,19 @@ class BenchmarkRepository @Inject constructor(
             val endTime = System.currentTimeMillis()
             val totalLatency = endTime - startTime
             
-            // パフォーマンス指標の収集
+            // 干渉統計を取得
+            val interferenceStats = interferenceMonitor.getInterferenceStats()
+            
+            // パフォーマンス指標の収集（干渉情報も含む）
             val latencyMetrics = LatencyMetrics(
                 firstTokenLatency = firstTokenTime,
                 totalLatency = totalLatency,
                 tokensPerSecond = if (totalLatency > 0) (tokenCount * 1000.0) / totalLatency else 0.0,
                 totalTokens = tokenCount,
-                promptTokens = estimateTokenCount(testCase.inputText)
+                promptTokens = estimateTokenCount(testCase.inputText),
+                userInterferenceDetected = interferenceStats.hasSignificantInterference,
+                baselineDeviation = calculateBaselineDeviation(totalLatency, testCase.taskType),
+                concurrentUserActions = interferenceStats.totalUserActions
             )
             
             val memoryMetrics = MemoryMetrics(
@@ -288,6 +334,20 @@ class BenchmarkRepository @Inject constructor(
     }
     
     /**
+     * ベースライン性能からの偏差を計算
+     */
+    private fun calculateBaselineDeviation(actualLatency: Long, taskType: TaskType): Float {
+        // タスクタイプ別のベースライン性能（ms）
+        val baselineLatency = when (taskType) {
+            TaskType.CHAT -> 2000L // 2秒
+            TaskType.SUMMARIZATION -> 3000L // 3秒
+            TaskType.PROOFREADING -> 2500L // 2.5秒
+        }
+        
+        return ((actualLatency - baselineLatency).toFloat() / baselineLatency) * 100f
+    }
+    
+    /**
      * ベンチマーク統計の計算
      */
     fun calculateBenchmarkStats(results: List<BenchmarkResult>): BenchmarkStats {
@@ -351,9 +411,18 @@ class BenchmarkRepository @Inject constructor(
      * 結果のクリア
      */
     fun clearResults() {
+        // 実行中の場合は先に停止
+        if (_currentSession.value?.status == BenchmarkStatus.RUNNING) {
+            stopBenchmarkSession()
+        }
+        
         _results.value = emptyList()
         _currentSession.value = null
         _progress.value = BenchmarkProgress()
+        
+        // 監視データもクリア
+        performanceMonitor.clearMonitoringData()
+        interferenceMonitor.clearMonitoring()
     }
 }
 

@@ -26,7 +26,8 @@ data class ProofreadCorrection(
 @HiltViewModel
 class ProofreadViewModel @Inject constructor(
     private val llmManager: LLMManager,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val interferenceMonitor: com.daasuu.llmsample.data.benchmark.InterferenceMonitor
 ) : ViewModel() {
     init {
         // 永続化された選択に基づいて初期化・切替を行う
@@ -72,6 +73,11 @@ class ProofreadViewModel @Inject constructor(
     }
 
     fun proofread() {
+        // ユーザーアクションを記録
+        interferenceMonitor.recordUserAction(
+            com.daasuu.llmsample.data.benchmark.UserActionType.PROOFREADING
+        )
+        
         proofreadJob?.cancel()
         proofreadJob = viewModelScope.launch {
             proofreadInternal()

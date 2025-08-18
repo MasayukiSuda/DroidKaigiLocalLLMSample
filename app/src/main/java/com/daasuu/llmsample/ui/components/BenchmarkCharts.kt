@@ -128,6 +128,7 @@ fun LatencyComparisonChart(
         groupedResults.forEach { (provider, providerResults) ->
             val avgLatency = providerResults.map { it.latencyMetrics.totalLatency.toDouble() }.average().toFloat()
             val avgFirstToken = providerResults.map { it.latencyMetrics.firstTokenLatency.toDouble() }.average().toFloat()
+            val interferenceCount = providerResults.count { it.latencyMetrics.userInterferenceDetected }
             
             ProviderLatencyBar(
                 provider = provider,
