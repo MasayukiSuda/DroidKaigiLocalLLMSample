@@ -1,12 +1,49 @@
 package com.daasuu.llmsample.ui.screens.benchmark
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -14,13 +51,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import dagger.hilt.android.EntryPointAccessors
 import com.daasuu.llmsample.data.benchmark.BenchmarkResult
-import com.daasuu.llmsample.data.benchmark.BenchmarkReportExporter
 import com.daasuu.llmsample.data.benchmark.BenchmarkSession
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.di.BenchmarkEntryPoint
 import com.daasuu.llmsample.ui.components.BenchmarkResultsCharts
+import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,17 +74,17 @@ fun BenchmarkDashboardScreen(
         )
         entryPoint.benchmarkReportExporter()
     }
-    
+
     val currentSession by viewModel.currentSession.collectAsState()
     val allResults by viewModel.allResults.collectAsState()
     val isRunning by viewModel.isRunning.collectAsState()
-    
+
     var selectedTab by remember { mutableStateOf(0) }
     var showExportDialog by remember { mutableStateOf(false) }
     var isExporting by remember { mutableStateOf(false) }
-    
+
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxWidth()
     ) {
         // ヘッダー部分をシンプルなタイトルに変更（戻るボタンとダウンロードボタンを削除）
         Surface(
@@ -63,12 +99,6 @@ fun BenchmarkDashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "ベンチマークダッシュボード",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
                 // エクスポートボタンのみ残す（シンプルなテキストボタンに変更）
                 if (allResults.isNotEmpty()) {
                     TextButton(
@@ -86,7 +116,7 @@ fun BenchmarkDashboardScreen(
                 }
             }
         }
-        
+
         // Tab Navigation (履歴タブを削除してシンプル化)
         TabRow(selectedTabIndex = selectedTab) {
             Tab(
@@ -102,7 +132,7 @@ fun BenchmarkDashboardScreen(
                 icon = { Icon(Icons.Default.Analytics, contentDescription = null) }
             )
         }
-        
+
         // Tab Content (2タブ制にシンプル化)
         when (selectedTab) {
             0 -> CurrentSessionTab(
@@ -113,15 +143,16 @@ fun BenchmarkDashboardScreen(
                 onStartComprehensive = viewModel::startComprehensiveBenchmark,
                 onStartCustom = viewModel::startCustomBenchmark,
                 onStop = viewModel::stopBenchmark,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxWidth()
             )
+
             1 -> ResultsAnalysisTab(
                 results = allResults,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
-    
+
     // Export Dialog
     if (showExportDialog) {
         ExportOptionsDialog(
@@ -192,7 +223,7 @@ fun CurrentSessionTab(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     if (isRunning) {
                         // Running state
                         Column {
@@ -212,7 +243,7 @@ fun CurrentSessionTab(
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            
+
                             Button(
                                 onClick = onStop,
                                 colors = ButtonDefaults.buttonColors(
@@ -236,21 +267,21 @@ fun CurrentSessionTab(
                                 icon = Icons.Default.Speed,
                                 onClick = onStartBasic
                             )
-                            
+
                             BenchmarkActionButton(
                                 text = "パフォーマンステスト",
                                 description = "詳細なメモリ・CPU使用量測定",
                                 icon = Icons.Default.Memory,
                                 onClick = onStartPerformance
                             )
-                            
+
                             BenchmarkActionButton(
                                 text = "総合ベンチマーク",
                                 description = "全プロバイダーで包括的テスト",
                                 icon = Icons.Default.Assessment,
                                 onClick = onStartComprehensive
                             )
-                            
+
                             BenchmarkActionButton(
                                 text = "カスタムテスト",
                                 description = "プロバイダーとテストを選択",
@@ -262,7 +293,7 @@ fun CurrentSessionTab(
                 }
             }
         }
-        
+
         // Current session results
         session?.let { currentSession ->
             item {
@@ -276,12 +307,12 @@ fun CurrentSessionTab(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         SessionSummary(session = currentSession)
                     }
                 }
             }
-            
+
             items(currentSession.results) { result ->
                 DashboardBenchmarkResultCard(result = result)
             }
@@ -355,7 +386,10 @@ fun SessionSummary(
         )
         SummaryItem(
             label = "成功率",
-            value = "${(session.results.count { it.isSuccess }.toFloat() / session.results.size * 100).toInt()}%"
+            value = "${
+                (session.results.count { it.isSuccess }
+                    .toFloat() / session.results.size * 100).toInt()
+            }%"
         )
         SummaryItem(
             label = "進捗",
@@ -421,9 +455,9 @@ fun DashboardBenchmarkResultCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -457,7 +491,7 @@ fun ExportOptionsDialog(
             Column {
                 Text("ベンチマーク結果をエクスポートする形式を選択してください。")
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
