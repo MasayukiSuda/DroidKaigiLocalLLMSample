@@ -30,6 +30,30 @@ class ModelManager @Inject constructor(
             description = "Meta Llama 3.2 3B Instruct quantized to 4-bit (Q4_K_M)"
         ),
         ModelInfo(
+            id = "llama-3.2-1b-instruct-q4_k_m",
+            name = "Llama 3.2 1B Instruct Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+            fileSize = 934281216L, // ~890MB
+            description = "Meta Llama 3.2 1B Instruct - smaller version of Llama 3.2"
+        ),
+        ModelInfo(
+            id = "llama-3.1-8b-instruct-q4_k_m",
+            name = "Llama 3.1 8B Instruct Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+            fileSize = 4830000000L, // ~4.5GB (approx)
+            description = "Meta Llama 3.1 8B Instruct - larger, more capable model"
+        ),
+        ModelInfo(
+            id = "qwen2.5-3b-instruct-q4_k_m",
+            name = "Qwen2.5 3B Instruct Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+            fileSize = 2100000000L, // ~2GB (approx)
+            description = "Alibaba Qwen2.5 3B Instruct - excellent multilingual support"
+        ),
+        ModelInfo(
             id = "tinyllama-1.1b-q4",
             name = "TinyLlama 1.1B Q4",
             provider = LLMProvider.LLAMA_CPP,
@@ -44,6 +68,39 @@ class ModelManager @Inject constructor(
             downloadUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
             fileSize = 1610612736L, // ~1.5GB
             description = "Microsoft Phi-2 model quantized to 4-bit"
+        ),
+        ModelInfo(
+            id = "phi-3.5-mini-instruct-q4_k_m",
+            name = "Phi-3.5 Mini Instruct Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
+            fileSize = 2300000000L, // ~2.2GB (approx)
+            description = "Microsoft Phi-3.5 Mini Instruct - improved version of Phi series"
+        ),
+        // Gemma3 Models (LiteRT/Task format)
+        ModelInfo(
+            id = "gemma3-2b-task",
+            name = "Gemma3 2B (.task)",
+            provider = LLMProvider.LITE_RT,
+            downloadUrl = "", // Manual placement required
+            fileSize = 1500000000L, // ~1.5GB (approx)
+            description = "Google Gemma3 2B model in TensorFlow Lite Task format - place manually in assets"
+        ),
+        ModelInfo(
+            id = "gemma3-9b-task",
+            name = "Gemma3 9B (.task)",
+            provider = LLMProvider.LITE_RT,
+            downloadUrl = "", // Manual placement required
+            fileSize = 5000000000L, // ~5GB (approx)
+            description = "Google Gemma3 9B model in TensorFlow Lite Task format - place manually in assets"
+        ),
+        ModelInfo(
+            id = "gemma3-27b-task",
+            name = "Gemma3 27B (.task)",
+            provider = LLMProvider.LITE_RT,
+            downloadUrl = "", // Manual placement required
+            fileSize = 15000000000L, // ~15GB (approx)
+            description = "Google Gemma3 27B model in TensorFlow Lite Task format - place manually in assets"
         ),
     )
 
@@ -142,9 +199,16 @@ class ModelManager @Inject constructor(
                         "llama-3.2-3b",
                         ignoreCase = true
                     ) -> "llama-3.2-3b-instruct-q4_k_m"
-
+                    fileName.contains("llama-3.2-1b", ignoreCase = true) -> "llama-3.2-1b-instruct-q4_k_m"
+                    fileName.contains("llama-3.1-8b", ignoreCase = true) -> "llama-3.1-8b-instruct-q4_k_m"
+                    fileName.contains("qwen2.5-3b", ignoreCase = true) -> "qwen2.5-3b-instruct-q4_k_m"
                     fileName.contains("tinyllama", ignoreCase = true) -> "tinyllama-1.1b-q4"
                     fileName.contains("phi-2", ignoreCase = true) -> "phi-2-q4"
+                    fileName.contains("phi-3.5", ignoreCase = true) -> "phi-3.5-mini-instruct-q4_k_m"
+                    fileName.contains("gemma3-2b", ignoreCase = true) -> "gemma3-2b-task"
+                    fileName.contains("gemma3-9b", ignoreCase = true) -> "gemma3-9b-task"
+                    fileName.contains("gemma3-27b", ignoreCase = true) -> "gemma3-27b-task"
+                    fileName.contains("gemma3", ignoreCase = true) -> "gemma3-2b-task" // Default to 2B
                     fileName.contains("mobilevlm", ignoreCase = true) -> "mobilevlm-q4"
                     else -> continue
                 }
