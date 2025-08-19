@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2025 Masayuki Suda
+ * Licensed under the MIT License
+ * 
+ * DroidKaigi Local LLM Sample - JNI bridge for llama.cpp
+ */
+
 #include <jni.h>
 #include <string>
 #include <android/log.h>
