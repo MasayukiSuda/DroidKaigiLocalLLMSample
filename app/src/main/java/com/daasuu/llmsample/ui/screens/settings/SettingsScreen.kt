@@ -43,6 +43,8 @@ fun SettingsScreen(
 ) {
     val models by viewModel.models.collectAsState()
     val selectedProvider by viewModel.selectedProvider.collectAsState()
+    val availableProviders by viewModel.availableProviders.collectAsState()
+    val geminiNanoCompatibility by viewModel.geminiNanoCompatibility.collectAsState()
 
     Column(
         modifier = Modifier
@@ -108,18 +110,49 @@ fun SettingsScreen(
                 )
 
                 LLMProvider.entries.forEach { provider ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    val isProviderAvailable = viewModel.isProviderAvailable(provider)
+                    val unavailableReason = viewModel.getProviderUnavailableReason(provider)
+                    
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        RadioButton(
-                            selected = selectedProvider == provider,
-                            onClick = { viewModel.selectProvider(provider) }
-                        )
-                        Text(
-                            text = provider.displayName,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedProvider == provider,
+                                onClick = { 
+                                    if (isProviderAvailable) {
+                                        viewModel.selectProvider(provider)
+                                    }
+                                },
+                                enabled = isProviderAvailable
+                            )
+                            Column(
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text(
+                                    text = provider.displayName,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = if (isProviderAvailable) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        }
+                                    )
+                                )
+                                
+                                if (!isProviderAvailable && unavailableReason != null) {
+                                    Text(
+                                        text = unavailableReason,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

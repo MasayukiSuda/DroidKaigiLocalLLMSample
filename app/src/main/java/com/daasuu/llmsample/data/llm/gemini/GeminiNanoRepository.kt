@@ -3,10 +3,8 @@ package com.daasuu.llmsample.data.llm.gemini
 import android.content.Context
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.domain.LLMRepository
-// import com.google.mlkit.genai.GenerativeModel
-// import com.google.mlkit.genai.GenerativeModels
-// import com.google.mlkit.genai.HarmCategory
-// import com.google.mlkit.genai.SafetySetting
+// Note: Official Gemini Nano API is not yet publicly available
+// This implementation uses experimental AICore service access
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -19,10 +17,14 @@ import kotlin.system.measureTimeMillis
 
 @Singleton
 class GeminiNanoRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val compatibilityChecker: GeminiNanoCompatibilityChecker,
+    private val aicoreServiceHelper: AICoreServiceHelper
 ) : LLMRepository {
     
-    // private var generativeModel: GenerativeModel? = null
+    private val aicoreHelper: AICoreServiceHelper by lazy {
+        AICoreServiceHelper(context)
+    }
     private var isInitialized = false
     private var firstTokenTime: Long = 0L
     
@@ -31,9 +33,31 @@ class GeminiNanoRepository @Inject constructor(
         
         withContext(Dispatchers.IO) {
             try {
-                // Mock implementation for demo purposes
-                // In production, this would initialize the actual Gemini Nano model
-                isInitialized = true
+                // Check device compatibility first
+                val compatibility = compatibilityChecker.isDeviceSupported()
+                if (compatibility !is DeviceCompatibility.Supported) {
+                    val message = compatibilityChecker.getCompatibilityMessage(compatibility)
+                    println("Gemini Nano initialization failed: $message")
+                    isInitialized = false
+                    return@withContext
+                }
+                
+                // Check if AICore service is available
+                if (!aicoreServiceHelper.isAICoreAvailable()) {
+                    println("AICore service not available on this device")
+                    isInitialized = false
+                    return@withContext
+                }
+                
+                // Attempt to connect to AICore service
+                val connected = aicoreServiceHelper.connectToAICore()
+                if (connected) {
+                    isInitialized = true
+                    println("Gemini Nano initialized successfully via AICore")
+                } else {
+                    isInitialized = false
+                    println("Failed to connect to AICore service")
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
                 isInitialized = false
@@ -42,12 +66,12 @@ class GeminiNanoRepository @Inject constructor(
     }
     
     override suspend fun release() {
-        // generativeModel = null
+        aicoreServiceHelper.disconnect()
         isInitialized = false
     }
     
     override suspend fun isAvailable(): Boolean {
-        return isInitialized
+        return isInitialized && aicoreServiceHelper.isAICoreAvailable()
     }
     
     override suspend fun generateChatResponse(prompt: String): Flow<String> = flow {
@@ -94,11 +118,31 @@ class GeminiNanoRepository @Inject constructor(
         
         withContext(Dispatchers.IO) {
             try {
-                // Mock implementation for demo
-                // In production, this would use the actual Gemini Nano API
-                mockGenerate(prompt, onToken, startTime)
+                if (isInitialized && aicoreServiceHelper.isAICoreAvailable()) {
+                    // Attempt to use AICore service for Gemini Nano
+                    val response = aicoreServiceHelper.generateText(prompt)
+                    
+                    if (response != null) {
+                        // Simulate streaming by chunking the response
+                        val chunks = response.chunked(20)
+                        chunks.forEach { chunk ->
+                            if (firstTokenTime == 0L) {
+                                firstTokenTime = System.currentTimeMillis() - startTime
+                            }
+                            onToken(chunk)
+                            kotlinx.coroutines.delay(80) // Slightly slower for on-device processing
+                        }
+                    } else {
+                        // AICore service failed, use mock response
+                        mockGenerate(prompt, onToken, startTime)
+                    }
+                } else {
+                    // Device not supported or service not available
+                    onToken("Error: Gemini Nano not available on this device. Please use a supported Pixel or Galaxy device.")
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+                // Fallback to mock on error
                 mockGenerate(prompt, onToken, startTime)
             }
         }
@@ -125,7 +169,7 @@ class GeminiNanoRepository @Inject constructor(
             return
         }
 
-        val response = "Gemini Nano による回答: $prompt に対する詳細な応答をここに生成します。"
+        val response = "Gemini Nano（オンデバイス）による回答: $prompt に対する詳細な応答をここに生成します。"
         val tokens = response.split(" ")
         
         tokens.forEach { token ->

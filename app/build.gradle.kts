@@ -97,8 +97,8 @@ dependencies {
     // (準備) .task ランタイムは後続PRで追加予定
     implementation("com.google.mediapipe:tasks-genai:0.10.25")
     
-    // ML Kit GenAI API (Gemini Nano) - Mock implementation for now
-    // implementation("com.google.mlkit:generative-ai:16.0.0-beta05")
+    // Note: Official Gemini Nano API is not yet publicly available
+    // This implementation uses experimental AICore service access
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
