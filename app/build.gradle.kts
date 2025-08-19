@@ -12,20 +12,20 @@ android {
 
     defaultConfig {
         applicationId = "com.daasuu.llmsample"
-        minSdk = 24
+        minSdk = 31
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
+
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
                 arguments += listOf("-DANDROID_STL=c++_shared")
             }
         }
-        
+
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -50,7 +50,7 @@ android {
     buildFeatures {
         compose = true
     }
-    
+
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
@@ -69,37 +69,37 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    
+
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
-    
+
     // Hilt for DI
     implementation("com.google.dagger:hilt-android:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
     kapt("com.google.dagger:hilt-compiler:2.48")
-    
+
     // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    
+
     // Material Icons Extended
     implementation("androidx.compose.material:material-icons-extended:1.5.4")
-    
+
     // HTTP Client for model downloads
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    
+
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // (準備) .task ランタイムは後続PRで追加予定
     implementation("com.google.mediapipe:tasks-genai:0.10.25")
-    
+
     // Note: Official Gemini Nano API is not yet publicly available
     // This implementation uses experimental AICore service access
-    
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
