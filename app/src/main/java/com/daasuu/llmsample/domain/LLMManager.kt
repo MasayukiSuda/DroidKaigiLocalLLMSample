@@ -4,8 +4,6 @@ import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.TaskType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -16,14 +14,11 @@ class LLMManager @Inject constructor(
 ) {
 
     private val _currentProvider = MutableStateFlow(LLMProvider.LITE_RT)
-    val currentProvider: StateFlow<LLMProvider> = _currentProvider.asStateFlow()
 
     private val _isInitialized = MutableStateFlow(false)
-    val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
     // ベンチマーク実行中フラグ
     private val _isBenchmarkRunning = MutableStateFlow(false)
-    val isBenchmarkRunning: StateFlow<Boolean> = _isBenchmarkRunning.asStateFlow()
 
     // プロバイダー切り替えの排他制御
     private val providerSwitchMutex = kotlinx.coroutines.sync.Mutex()
@@ -34,14 +29,6 @@ class LLMManager @Inject constructor(
             _currentProvider.value = provider
             _isInitialized.value = repo.isAvailable()
         }
-    }
-
-    suspend fun switchProvider(provider: LLMProvider) {
-        // Release current provider
-        getCurrentRepository()?.release()
-
-        // Initialize new provider
-        initialize(provider)
     }
 
     suspend fun generateChatResponse(prompt: String): Flow<String> {
@@ -108,7 +95,7 @@ class LLMManager @Inject constructor(
     /**
      * ベンチマーク終了時の処理
      */
-    suspend fun finishBenchmark() {
+    fun finishBenchmark() {
         _isBenchmarkRunning.value = false
 
         // 元のプロバイダーに戻す処理は必要に応じて実装

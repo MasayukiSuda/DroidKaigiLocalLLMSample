@@ -63,35 +63,26 @@ class ChatViewModel @Inject constructor(
             try {
                 // Generate response from selected LLM
                 val responseFlow = llmManager.generateChatResponse(text)
-                if (responseFlow != null) {
-                    val responseBuilder = StringBuilder()
-                    responseFlow.collect { token ->
-                        responseBuilder.append(token)
-                        // Update the last message with accumulated response
-                        val currentMessages = _messages.value.toMutableList()
-                        if (currentMessages.isNotEmpty() && !currentMessages.last().isUser) {
-                            // Update existing response message
-                            currentMessages[currentMessages.size - 1] = currentMessages.last().copy(
-                                content = responseBuilder.toString()
+                val responseBuilder = StringBuilder()
+                responseFlow.collect { token ->
+                    responseBuilder.append(token)
+                    // Update the last message with accumulated response
+                    val currentMessages = _messages.value.toMutableList()
+                    if (currentMessages.isNotEmpty() && !currentMessages.last().isUser) {
+                        // Update existing response message
+                        currentMessages[currentMessages.size - 1] = currentMessages.last().copy(
+                            content = responseBuilder.toString()
+                        )
+                    } else {
+                        // Add new response message
+                        currentMessages.add(
+                            ChatMessage(
+                                content = responseBuilder.toString(),
+                                isUser = false
                             )
-                        } else {
-                            // Add new response message
-                            currentMessages.add(
-                                ChatMessage(
-                                    content = responseBuilder.toString(),
-                                    isUser = false
-                                )
-                            )
-                        }
-                        _messages.value = currentMessages
+                        )
                     }
-                } else {
-                    // Fallback response
-                    val responseMessage = ChatMessage(
-                        content = "Error: LLM not available",
-                        isUser = false
-                    )
-                    _messages.value = _messages.value + responseMessage
+                    _messages.value = currentMessages
                 }
             } catch (e: Exception) {
                 val errorMessage = ChatMessage(
