@@ -3,13 +3,16 @@ package com.daasuu.llmsample.data.llm.gemini
 import android.content.Context
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.domain.LLMRepository
-// Note: Official Gemini Nano API is not yet publicly available
-// This implementation uses experimental AICore service access
+import com.google.ai.edge.aicore.GenerativeAIException
+import com.google.ai.edge.aicore.GenerativeModel
+import com.google.ai.edge.aicore.generationConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,13 +21,10 @@ import kotlin.system.measureTimeMillis
 @Singleton
 class GeminiNanoRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val compatibilityChecker: GeminiNanoCompatibilityChecker,
-    private val aicoreServiceHelper: AICoreServiceHelper
+    private val compatibilityChecker: GeminiNanoCompatibilityChecker
 ) : LLMRepository {
     
-    private val aicoreHelper: AICoreServiceHelper by lazy {
-        AICoreServiceHelper(context)
-    }
+    private var model: GenerativeModel? = null
     private var isInitialized = false
     private var firstTokenTime: Long = 0L
     
@@ -42,21 +42,14 @@ class GeminiNanoRepository @Inject constructor(
                     return@withContext
                 }
                 
-                // Check if AICore service is available
-                if (!aicoreServiceHelper.isAICoreAvailable()) {
-                    println("AICore service not available on this device")
-                    isInitialized = false
-                    return@withContext
-                }
+                // Initialize GenerativeModel
+                initGenerativeModel()
+                isInitialized = model != null
                 
-                // Attempt to connect to AICore service
-                val connected = aicoreServiceHelper.connectToAICore()
-                if (connected) {
-                    isInitialized = true
-                    println("Gemini Nano initialized successfully via AICore")
+                if (isInitialized) {
+                    println("Gemini Nano initialized successfully")
                 } else {
-                    isInitialized = false
-                    println("Failed to connect to AICore service")
+                    println("Failed to initialize Gemini Nano GenerativeModel")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -66,89 +59,96 @@ class GeminiNanoRepository @Inject constructor(
     }
     
     override suspend fun release() {
-        aicoreServiceHelper.disconnect()
+        model?.close()
+        model = null
         isInitialized = false
     }
     
     override suspend fun isAvailable(): Boolean {
-        return isInitialized && aicoreServiceHelper.isAICoreAvailable()
+        return isInitialized && model != null
+    }
+    
+    private fun initGenerativeModel() {
+        try {
+            model = GenerativeModel(
+                generationConfig {
+                    context = this@GeminiNanoRepository.context
+                    temperature = 0.7f
+                    topK = 40
+                    maxOutputTokens = 1000
+                }
+            )
+        } catch (e: Exception) {
+            println("Failed to create GenerativeModel: ${e.message}")
+            model = null
+        }
     }
     
     override suspend fun generateChatResponse(prompt: String): Flow<String> = flow {
-        if (!isInitialized) {
+        if (!isInitialized || model == null) {
             emit("Error: Gemini Nano not initialized")
             return@flow
         }
         
         val fullPrompt = buildChatPrompt(prompt)
-        generateResponse(fullPrompt) { token ->
-            emit(token)
-        }
+        generateStreamingResponse(fullPrompt)
     }.flowOn(Dispatchers.IO)
     
     override suspend fun summarizeText(text: String): Flow<String> = flow {
-        if (!isInitialized) {
+        if (!isInitialized || model == null) {
             emit("Error: Gemini Nano not initialized")
             return@flow
         }
         
         val prompt = buildSummarizationPrompt(text)
-        generateResponse(prompt) { token ->
-            emit(token)
-        }
+        generateStreamingResponse(prompt)
     }.flowOn(Dispatchers.IO)
     
     override suspend fun proofreadText(text: String): Flow<String> = flow {
-        if (!isInitialized) {
+        if (!isInitialized || model == null) {
             emit("Error: Gemini Nano not initialized")
             return@flow
         }
         
         val prompt = buildProofreadingPrompt(text)
-        generateResponse(prompt) { token ->
-            emit(token)
-        }
+        generateStreamingResponse(prompt)
     }.flowOn(Dispatchers.IO)
     
 
     
-    private suspend fun generateResponse(prompt: String, onToken: suspend (String) -> Unit) {
+    private suspend fun FlowCollector<String>.generateStreamingResponse(prompt: String) {
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
         
-        withContext(Dispatchers.IO) {
-            try {
-                if (isInitialized && aicoreServiceHelper.isAICoreAvailable()) {
-                    // Attempt to use AICore service for Gemini Nano
-                    val response = aicoreServiceHelper.generateText(prompt)
-                    
-                    if (response != null) {
-                        // Simulate streaming by chunking the response
-                        val chunks = response.chunked(20)
-                        chunks.forEach { chunk ->
+        try {
+            if (model != null) {
+                // Use streaming generation for real-time response
+                model!!.generateContentStream(prompt)
+                    .onCompletion { /* Stream completed */ }
+                    .collect { response ->
+                        response.text?.let { text ->
                             if (firstTokenTime == 0L) {
                                 firstTokenTime = System.currentTimeMillis() - startTime
                             }
-                            onToken(chunk)
-                            kotlinx.coroutines.delay(80) // Slightly slower for on-device processing
+                            emit(text)
                         }
-                    } else {
-                        // AICore service failed, use mock response
-                        mockGenerate(prompt, onToken, startTime)
                     }
-                } else {
-                    // Device not supported or service not available
-                    onToken("Error: Gemini Nano not available on this device. Please use a supported Pixel or Galaxy device.")
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Fallback to mock on error
-                mockGenerate(prompt, onToken, startTime)
+            } else {
+                // Model not available, use mock response
+                emit("Error: Gemini Nano model not initialized. Please check device compatibility.")
             }
+        } catch (e: GenerativeAIException) {
+            // Handle specific AI generation errors
+            println("GenerativeAI Error: ${e.message}")
+            emit("Error: ${e.message}")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Fallback to mock on other errors
+            mockGenerate(prompt, startTime)
         }
     }
     
-    private suspend fun mockGenerate(prompt: String, onToken: suspend (String) -> Unit, startTime: Long) {
+    private suspend fun FlowCollector<String>.mockGenerate(prompt: String, startTime: Long) {
         // If proofreading prompt requests JSON, return deterministic JSON for demo
         if (prompt.contains("JSON only") && prompt.contains("Text:")) {
             val original = prompt.substringAfter("Text:").trim()
@@ -163,7 +163,7 @@ class GeminiNanoRepository @Inject constructor(
                 if (firstTokenTime == 0L) {
                     firstTokenTime = System.currentTimeMillis() - startTime
                 }
-                onToken(chunk)
+                emit(chunk)
                 kotlinx.coroutines.delay(40)
             }
             return
@@ -176,7 +176,7 @@ class GeminiNanoRepository @Inject constructor(
             if (firstTokenTime == 0L) {
                 firstTokenTime = System.currentTimeMillis() - startTime
             }
-            onToken("$token ")
+            emit("$token ")
             kotlinx.coroutines.delay(60) // Slightly faster
         }
     }

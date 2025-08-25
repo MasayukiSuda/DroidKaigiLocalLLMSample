@@ -2,7 +2,6 @@ package com.daasuu.llmsample.data.llm.gemini
 
 import android.content.Context
 import android.os.Build
-// import com.google.mlkit.genai.GenerativeModels
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +14,7 @@ class GeminiNanoCompatibilityChecker @Inject constructor(
     /**
      * Check if the device supports Gemini Nano (on-device AI)
      */
-    suspend fun isDeviceSupported(): DeviceCompatibility {
+    fun isDeviceSupported(): DeviceCompatibility {
         // Check Android version (Gemini Nano requires Android 14+)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             return DeviceCompatibility.UnsupportedAndroidVersion(Build.VERSION.SDK_INT)
@@ -27,17 +26,9 @@ class GeminiNanoCompatibilityChecker @Inject constructor(
             return DeviceCompatibility.UnsupportedDevice(deviceModel)
         }
         
-        // Check for AICore availability
-        return try {
-            val aicoreHelper = AICoreServiceHelper(context)
-            if (aicoreHelper.isAICoreAvailable() && aicoreHelper.hasGeminiNanoSupport()) {
-                DeviceCompatibility.Supported
-            } else {
-                DeviceCompatibility.NotAvailable
-            }
-        } catch (e: Exception) {
-            DeviceCompatibility.Error(e.message ?: "Unknown error")
-        }
+        // Basic compatibility check passed
+        // Actual availability will be determined when trying to initialize GenerativeModel
+        return DeviceCompatibility.Supported
     }
     
     /**
