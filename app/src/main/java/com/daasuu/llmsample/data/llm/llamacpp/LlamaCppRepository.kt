@@ -1,48 +1,45 @@
 package com.daasuu.llmsample.data.llm.llamacpp
 
 import android.content.Context
+import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model_manager.ModelManager
+import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.withContext
-import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.system.measureTimeMillis
 
 @Singleton
 class LlamaCppRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelManager: ModelManager
 ) : LLMRepository {
-    
+
     private var modelPtr: Long = 0L
     private var isInitialized = false
     private var firstTokenTime: Long = 0L
     private var isMock: Boolean = false
     private val chatHistory: ArrayDeque<Pair<String, String>> = ArrayDeque()
     private val maxHistoryTurns: Int = 4 // keep last N user-assistant pairs
-    
+
     override suspend fun initialize() {
         if (isInitialized) return
-        
+
         withContext(Dispatchers.IO) {
             try {
                 // Try to find downloaded models for llama.cpp
                 val downloadedModels = modelManager.getModelsByProvider(LLMProvider.LLAMA_CPP)
                     .filter { it.isDownloaded }
-                
+
                 if (downloadedModels.isNotEmpty()) {
                     for (modelInfo in downloadedModels) {
                         val modelPath = modelInfo.localPath!!
-                        
+
                         // Check if model file actually exists and is readable
                         val modelFile = java.io.File(modelPath)
                         if (!modelFile.exists()) {
@@ -57,15 +54,15 @@ class LlamaCppRepository @Inject constructor(
                             println("Model file is empty: $modelPath")
                             continue
                         }
-                        
+
                         println("Attempting to initialize LlamaCpp with model: $modelPath (${modelFile.length()} bytes)")
-                        
+
                         modelPtr = LlamaCppJNI.loadModel(
                             modelPath = modelPath,
                             contextSize = 2048,
                             nGpuLayers = 0 // CPU only for now
                         )
-                        
+
                         if (modelPtr != 0L) {
                             isInitialized = true
                             isMock = false
@@ -75,7 +72,7 @@ class LlamaCppRepository @Inject constructor(
                             println("Failed to load model: $modelPath")
                         }
                     }
-                    
+
                     // If we get here, no models worked
                     println("All downloaded models failed to load, falling back to mock")
                     fallbackToMock()
@@ -90,7 +87,7 @@ class LlamaCppRepository @Inject constructor(
             }
         }
     }
-    
+
     private fun fallbackToMock() {
         try {
             modelPtr = LlamaCppJNI.loadModel(
@@ -108,7 +105,7 @@ class LlamaCppRepository @Inject constructor(
             isMock = false
         }
     }
-    
+
     override suspend fun release() {
         if (modelPtr != 0L) {
             withContext(Dispatchers.IO) {
@@ -118,20 +115,20 @@ class LlamaCppRepository @Inject constructor(
             }
         }
     }
-    
+
     override suspend fun isAvailable(): Boolean = isInitialized
-    
+
     override suspend fun generateChatResponse(prompt: String): Flow<String> = channelFlow {
         if (!isInitialized) {
             send("Error: Llama.cpp model not initialized")
             return@channelFlow
         }
-        
+
         val fullPrompt = buildChatPrompt(prompt)
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
         val responseBuilder = StringBuilder()
-        
+
         withContext(Dispatchers.IO) {
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
@@ -147,11 +144,11 @@ class LlamaCppRepository @Inject constructor(
                         responseBuilder.append(token)
                         trySend(token)
                     }
-                    
+
                     override fun onComplete() {
                         // Do not add to history for now to avoid compounding errors
                     }
-                    
+
                     override fun onError(error: String) {
                         trySend(" Error: $error")
                     }
@@ -159,17 +156,17 @@ class LlamaCppRepository @Inject constructor(
             )
         }
     }
-    
+
     override suspend fun summarizeText(text: String): Flow<String> = channelFlow {
         if (!isInitialized) {
             send("Error: Llama.cpp model not initialized")
             return@channelFlow
         }
-        
+
         val prompt = buildSummarizationPrompt(text)
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
-        
+
         withContext(Dispatchers.IO) {
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
@@ -184,7 +181,7 @@ class LlamaCppRepository @Inject constructor(
                         }
                         trySend(token)
                     }
-                    
+
                     override fun onComplete() {}
                     override fun onError(error: String) {
                         trySend(" Error: $error")
@@ -193,13 +190,13 @@ class LlamaCppRepository @Inject constructor(
             )
         }
     }
-    
+
     override suspend fun proofreadText(text: String): Flow<String> = channelFlow {
         if (!isInitialized) {
             send("Error: Llama.cpp model not initialized")
             return@channelFlow
         }
-        
+
         val prompt = buildProofreadingPrompt(text)
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
@@ -225,7 +222,7 @@ class LlamaCppRepository @Inject constructor(
             }
             return@channelFlow
         }
-        
+
         withContext(Dispatchers.IO) {
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
@@ -240,7 +237,7 @@ class LlamaCppRepository @Inject constructor(
                         }
                         trySend(token)
                     }
-                    
+
                     override fun onComplete() {}
                     override fun onError(error: String) {
                         trySend(" Error: $error")
@@ -249,13 +246,12 @@ class LlamaCppRepository @Inject constructor(
             )
         }
     }
-    
 
-    
+
     private suspend fun generateResponse(prompt: String, onToken: suspend (String) -> Unit) {
         firstTokenTime = 0L
         val startTime = System.currentTimeMillis()
-        
+
         withContext(Dispatchers.IO) {
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
@@ -272,7 +268,7 @@ class LlamaCppRepository @Inject constructor(
                             onToken(token)
                         }
                     }
-                    
+
                     override fun onComplete() {}
                     override fun onError(error: String) {
                         kotlinx.coroutines.runBlocking {
@@ -283,26 +279,32 @@ class LlamaCppRepository @Inject constructor(
             )
         }
     }
-    
+
     private fun buildChatPrompt(userMessage: String): String {
+        // ベンチマークモードが有効な場合は統一プロンプトを使用
+        if (BenchmarkMode.isCurrentlyEnabled()) {
+            return CommonPrompts.buildChatPrompt(userMessage)
+        }
+
+        // 最適化モード: Llama.cpp向けの詳細なシステムプロンプト
         val cleanMessage = userMessage.trim().take(500)
         if (cleanMessage.isEmpty()) return "Hello"
 
         // Detect language rough heuristic to localize system prompt
-        val isJapanese = containsJapanese(cleanMessage)
+        val isJapanese = CommonPrompts.containsJapanese(cleanMessage)
         return if (isJapanese) {
             // 単発・簡潔回答 + ロールプレイ禁止を明示
             (
-                "指示: 次の入力に日本語で簡潔に返答してください。2文以内。ロールプレイや複数人物の会話(例: Mom:, Son:, 母:, 父:, 息子:, 娘:)は禁止。あなた(Assistant)以外の発話は書かない。\n" +
-                "入力: " + cleanMessage + "\n" +
-                "返答:"
-            )
+                    "指示: 次の入力に日本語で簡潔に返答してください。2文以内。ロールプレイや複数人物の会話(例: Mom:, Son:, 母:, 父:, 息子:, 娘:)は禁止。あなた(Assistant)以外の発話は書かない。\n" +
+                            "入力: " + cleanMessage + "\n" +
+                            "返答:"
+                    )
         } else {
             (
-                "Instruction: Respond concisely in at most 2 sentences. Do NOT roleplay or write multi-speaker dialogues (e.g., Mom:, Dad:, Son:, Daughter:). Write only your answer as the assistant.\n" +
-                "Input: " + cleanMessage + "\n" +
-                "Answer:"
-            )
+                    "Instruction: Respond concisely in at most 2 sentences. Do NOT roleplay or write multi-speaker dialogues (e.g., Mom:, Dad:, Son:, Daughter:). Write only your answer as the assistant.\n" +
+                            "Input: " + cleanMessage + "\n" +
+                            "Answer:"
+                    )
         }
     }
 
@@ -313,15 +315,20 @@ class LlamaCppRepository @Inject constructor(
             chatHistory.removeFirst()
         }
     }
-    
+
     private fun buildSummarizationPrompt(text: String): String {
-        // Ultra-simple prompt to avoid tokenization issues
+        // ベンチマークモードが有効な場合は統一プロンプトを使用
+        if (BenchmarkMode.isCurrentlyEnabled()) {
+            return CommonPrompts.buildSummarizationPrompt(text)
+        }
+
+        // 最適化モード: Llama.cpp向けの詳細な指示
         val cleanText = text.trim().take(500) // Very short limit
         if (cleanText.isEmpty()) {
             return "Hello"
         }
 
-        val isJapanese = containsJapanese(cleanText)
+        val isJapanese = CommonPrompts.containsJapanese(cleanText)
         if (isJapanese) {
             return """
 以下のテキストを日本語で簡潔に要約してください。出力は箇条書きで2〜3点。前置きや締めの文は不要で、要点のみを示してください。翻訳はせず、日本語で出力してください。
@@ -350,21 +357,14 @@ Summary:
 """.trimIndent()
     }
 
-    private fun containsJapanese(text: String): Boolean {
-        for (ch in text) {
-            val block = java.lang.Character.UnicodeBlock.of(ch)
-            if (block == java.lang.Character.UnicodeBlock.HIRAGANA ||
-                block == java.lang.Character.UnicodeBlock.KATAKANA ||
-                block == java.lang.Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS
-            ) {
-                return true
-            }
-        }
-        return false
-    }
-    
+
     private fun buildProofreadingPrompt(text: String): String {
-        // Keep instruction extremely compact to accommodate tiny models
+        // ベンチマークモードが有効な場合は統一プロンプトを使用
+        if (BenchmarkMode.isCurrentlyEnabled()) {
+            return CommonPrompts.buildProofreadingPrompt(text)
+        }
+
+        // 最適化モード: Llama.cpp向けのJSON形式指示
         val cleanText = text.trim().take(500)
         if (cleanText.isEmpty()) {
             return "{}"
@@ -373,9 +373,9 @@ Summary:
         // Ask for strict JSON only to allow deterministic parsing on UI side
         // Keep everything single-line and short
         return (
-            "JSON only. No prose. Japanese proofreading: minimal edits only, preserve meaning/order, do not add info. " +
-            "Format {\"corrected_text\":string,\"corrections\":[{\"original\":string,\"suggested\":string,\"type\":string,\"explanation\":string,\"start\":number,\"end\":number}]}. " +
-            "Text: " + cleanText
-        )
+                "JSON only. No prose. Japanese proofreading: minimal edits only, preserve meaning/order, do not add info. " +
+                        "Format {\"corrected_text\":string,\"corrections\":[{\"original\":string,\"suggested\":string,\"type\":string,\"explanation\":string,\"start\":number,\"end\":number}]}. " +
+                        "Text: " + cleanText
+                )
     }
 }

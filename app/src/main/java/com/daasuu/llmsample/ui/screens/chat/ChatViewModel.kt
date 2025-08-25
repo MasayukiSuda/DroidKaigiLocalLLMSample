@@ -3,7 +3,6 @@ package com.daasuu.llmsample.ui.screens.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.ChatMessage
-import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,20 +18,20 @@ class ChatViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val interferenceMonitor: com.daasuu.llmsample.data.benchmark.InterferenceMonitor
 ) : ViewModel() {
-    
+
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
-    
+
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
-    
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-    
+
     fun updateInputText(text: String) {
         _inputText.value = text
     }
-    
+
     init {
         // 永続化された選択に基づいて初期化・切替を行う
         viewModelScope.launch {
@@ -41,16 +40,16 @@ class ChatViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun sendMessage() {
         val text = _inputText.value.trim()
         if (text.isBlank()) return
-        
+
         // ユーザーアクションを記録
         interferenceMonitor.recordUserAction(
             com.daasuu.llmsample.data.benchmark.UserActionType.CHAT_MESSAGE
         )
-        
+
         viewModelScope.launch {
             // Add user message
             val userMessage = ChatMessage(
@@ -60,7 +59,7 @@ class ChatViewModel @Inject constructor(
             _messages.value = _messages.value + userMessage
             _inputText.value = ""
             _isLoading.value = true
-            
+
             try {
                 // Generate response from selected LLM
                 val responseFlow = llmManager.generateChatResponse(text)

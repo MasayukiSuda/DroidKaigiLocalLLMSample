@@ -13,7 +13,8 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileWriter
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,19 +22,20 @@ import javax.inject.Singleton
 class BenchmarkReportExporter @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    
+
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
-    private val readableDateFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault())
-    
+    private val readableDateFormat =
+        SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault())
+
     suspend fun exportToCsv(results: List<BenchmarkResult>): File = withContext(Dispatchers.IO) {
         val timestamp = dateFormat.format(Date())
         val fileName = "benchmark_report_$timestamp.csv"
         val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
-        
+
         FileWriter(file).use { writer ->
             // Header
             writer.appendLine("ID,テストケース,プロバイダー,モデル名,実行時刻,総レイテンシ(ms),初回トークンレイテンシ(ms),平均トークンレイテンシ(ms),最大メモリ使用量(MB),平均メモリ使用量(MB),バッテリー消費量(%),品質スコア,生成トークン数,生成文字数,実行成功,エラーメッセージ")
-            
+
             // Data rows
             results.forEach { result ->
                 val row = listOf(
@@ -54,19 +56,19 @@ class BenchmarkReportExporter @Inject constructor(
                     if (result.isSuccess) "成功" else "失敗",
                     result.errorMessage ?: ""
                 ).joinToString(",") { "\"$it\"" }
-                
+
                 writer.appendLine(row)
             }
         }
-        
+
         file
     }
-    
+
     suspend fun exportToJson(results: List<BenchmarkResult>): File = withContext(Dispatchers.IO) {
         val timestamp = dateFormat.format(Date())
         val fileName = "benchmark_report_$timestamp.json"
         val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
-        
+
         val jsonReport = JSONObject().apply {
             put("exportTimestamp", System.currentTimeMillis())
             put("exportDate", readableDateFormat.format(Date()))
@@ -78,35 +80,35 @@ class BenchmarkReportExporter @Inject constructor(
                 }
             })
         }
-        
+
         FileWriter(file).use { writer ->
             writer.write(jsonReport.toString(2))
         }
-        
+
         file
     }
-    
+
     suspend fun exportToHtml(results: List<BenchmarkResult>): File = withContext(Dispatchers.IO) {
         val timestamp = dateFormat.format(Date())
         val fileName = "benchmark_report_$timestamp.html"
         val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
-        
+
         val htmlContent = createHtmlReport(results)
-        
+
         FileWriter(file).use { writer ->
             writer.write(htmlContent)
         }
-        
+
         file
     }
-    
+
     fun shareReport(file: File) {
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
             file
         )
-        
+
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = when (file.extension.lowercase()) {
                 "csv" -> "text/csv"
@@ -118,15 +120,15 @@ class BenchmarkReportExporter @Inject constructor(
             putExtra(Intent.EXTRA_SUBJECT, "ベンチマークレポート - ${file.nameWithoutExtension}")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        
+
         val chooserIntent = Intent.createChooser(shareIntent, "ベンチマークレポートを共有")
         chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooserIntent)
     }
-    
+
     private fun createSummaryJson(results: List<BenchmarkResult>): JSONObject {
         val groupedResults = results.groupBy { it.provider }
-        
+
         return JSONObject().apply {
             put("totalTests", results.size)
             put("successfulTests", results.count { it.isSuccess })
@@ -136,17 +138,43 @@ class BenchmarkReportExporter @Inject constructor(
                     put(provider.name, JSONObject().apply {
                         put("displayName", provider.displayName)
                         put("testCount", providerResults.size)
-                        put("successRate", (providerResults.count { it.isSuccess }.toFloat() / providerResults.size * 100).toInt())
-                        put("avgLatency", providerResults.map { it.latencyMetrics.totalLatency.toDouble() }.average().toInt())
-                        put("avgMemory", providerResults.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }.average().toInt())
-                        put("avgBattery", String.format("%.2f", providerResults.map { it.batteryMetrics.batteryDrain.toDouble() }.average()))
-                        put("avgQuality", String.format("%.2f", providerResults.mapNotNull { it.qualityMetrics.relevanceScore?.toDouble() }.takeIf { it.isNotEmpty() }?.average() ?: 0.0))
+                        put(
+                            "successRate",
+                            (providerResults.count { it.isSuccess }
+                                .toFloat() / providerResults.size * 100).toInt()
+                        )
+                        put(
+                            "avgLatency",
+                            providerResults.map { it.latencyMetrics.totalLatency.toDouble() }
+                                .average().toInt()
+                        )
+                        put(
+                            "avgMemory",
+                            providerResults.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }
+                                .average().toInt()
+                        )
+                        put(
+                            "avgBattery",
+                            String.format(
+                                "%.2f",
+                                providerResults.map { it.batteryMetrics.batteryDrain.toDouble() }
+                                    .average()
+                            )
+                        )
+                        put(
+                            "avgQuality",
+                            String.format(
+                                "%.2f",
+                                providerResults.mapNotNull { it.qualityMetrics.relevanceScore?.toDouble() }
+                                    .takeIf { it.isNotEmpty() }?.average() ?: 0.0
+                            )
+                        )
                     })
                 }
             })
         }
     }
-    
+
     private fun resultToJson(result: BenchmarkResult): JSONObject {
         return JSONObject().apply {
             put("id", result.id)
@@ -159,7 +187,7 @@ class BenchmarkReportExporter @Inject constructor(
             put("isSuccess", result.isSuccess)
             put("errorMessage", result.errorMessage)
             put("generatedText", result.generatedText)
-            
+
             put("latencyMetrics", JSONObject().apply {
                 put("totalLatency", result.latencyMetrics.totalLatency)
                 put("firstTokenLatency", result.latencyMetrics.firstTokenLatency)
@@ -167,7 +195,7 @@ class BenchmarkReportExporter @Inject constructor(
                 put("totalTokens", result.latencyMetrics.totalTokens)
                 put("tokensPerSecond", result.latencyMetrics.tokensPerSecond)
             })
-            
+
             put("memoryMetrics", JSONObject().apply {
                 put("modelSizeMB", result.memoryMetrics.modelSizeMB)
                 put("peakMemoryUsageMB", result.memoryMetrics.peakMemoryUsageMB)
@@ -176,17 +204,20 @@ class BenchmarkReportExporter @Inject constructor(
                 put("availableMemoryMB", result.memoryMetrics.availableMemoryMB)
                 put("totalMemoryMB", result.memoryMetrics.totalMemoryMB)
             })
-            
+
             put("batteryMetrics", JSONObject().apply {
                 put("batteryLevelBefore", result.batteryMetrics.batteryLevelBefore)
                 put("batteryLevelAfter", result.batteryMetrics.batteryLevelAfter)
                 put("batteryDrain", result.batteryMetrics.batteryDrain)
-                put("estimatedBatteryDrainPerHour", result.batteryMetrics.estimatedBatteryDrainPerHour)
+                put(
+                    "estimatedBatteryDrainPerHour",
+                    result.batteryMetrics.estimatedBatteryDrainPerHour
+                )
                 put("powerConsumptionMW", result.batteryMetrics.powerConsumptionMW)
                 put("isCharging", result.batteryMetrics.isCharging)
                 put("batteryTemperature", result.batteryMetrics.batteryTemperature)
             })
-            
+
             put("qualityMetrics", JSONObject().apply {
                 put("outputLength", result.qualityMetrics.outputLength)
                 put("outputTokens", result.qualityMetrics.outputTokens)
@@ -198,11 +229,11 @@ class BenchmarkReportExporter @Inject constructor(
             })
         }
     }
-    
+
     private fun createHtmlReport(results: List<BenchmarkResult>): String {
         val timestamp = readableDateFormat.format(Date())
         val groupedResults = results.groupBy { it.provider }
-        
+
         return """
 <!DOCTYPE html>
 <html lang="ja">
@@ -284,16 +315,17 @@ class BenchmarkReportExporter @Inject constructor(
                 </tr>
             </thead>
             <tbody>
-                ${results.joinToString("") { result ->
-                    val providerClass = when (result.provider) {
-                        LLMProvider.LLAMA_CPP -> "provider-llama"
-                        LLMProvider.LITE_RT -> "provider-litert"
-                        LLMProvider.GEMINI_NANO -> "provider-gemini"
-                    }
-                    val statusClass = if (result.isSuccess) "success" else "failure"
-                    val statusText = if (result.isSuccess) "✅ 成功" else "❌ 失敗"
-                    
-                    """
+                ${
+            results.joinToString("") { result ->
+                val providerClass = when (result.provider) {
+                    LLMProvider.LLAMA_CPP -> "provider-llama"
+                    LLMProvider.LITE_RT -> "provider-litert"
+                    LLMProvider.GEMINI_NANO -> "provider-gemini"
+                }
+                val statusClass = if (result.isSuccess) "success" else "failure"
+                val statusText = if (result.isSuccess) "✅ 成功" else "❌ 失敗"
+
+                """
                     <tr class="$providerClass">
                         <td><strong>${result.provider.displayName}</strong></td>
                         <td>${result.testCaseId}</td>
@@ -301,11 +333,19 @@ class BenchmarkReportExporter @Inject constructor(
                         <td>${result.latencyMetrics.totalLatency.toInt()}</td>
                         <td>${result.memoryMetrics.peakMemoryUsageMB.toInt()}</td>
                         <td>${String.format("%.2f", result.batteryMetrics.batteryDrain)}</td>
-                        <td>${result.qualityMetrics.relevanceScore?.let { String.format("%.2f", it) } ?: "N/A"}</td>
+                        <td>${
+                    result.qualityMetrics.relevanceScore?.let {
+                        String.format(
+                            "%.2f",
+                            it
+                        )
+                    } ?: "N/A"
+                }</td>
                         <td class="$statusClass">$statusText</td>
                     </tr>
                     """
-                }}
+            }
+        }
             </tbody>
         </table>
         
@@ -321,10 +361,12 @@ class BenchmarkReportExporter @Inject constructor(
 </html>
         """.trimIndent()
     }
-    
+
     private fun createLatencyChart(groupedResults: Map<LLMProvider, List<BenchmarkResult>>): String {
-        val maxLatency = groupedResults.values.flatten().maxOfOrNull { it.latencyMetrics.totalLatency.toFloat() } ?: 1000f
-        
+        val maxLatency =
+            groupedResults.values.flatten().maxOfOrNull { it.latencyMetrics.totalLatency.toFloat() }
+                ?: 1000f
+
         return groupedResults.map { (provider, results) ->
             val avgLatency = results.map { it.latencyMetrics.totalLatency.toDouble() }.average()
             val width = (avgLatency / maxLatency * 300).toInt()
@@ -333,7 +375,7 @@ class BenchmarkReportExporter @Inject constructor(
                 LLMProvider.LITE_RT -> "bar-litert"
                 LLMProvider.GEMINI_NANO -> "bar-gemini"
             }
-            
+
             """
             <div class="bar-chart">
                 <div class="bar-label">${provider.displayName}</div>
@@ -342,10 +384,11 @@ class BenchmarkReportExporter @Inject constructor(
             """
         }.joinToString("")
     }
-    
+
     private fun createMemoryChart(groupedResults: Map<LLMProvider, List<BenchmarkResult>>): String {
-        val maxMemory = groupedResults.values.flatten().maxOfOrNull { it.memoryMetrics.peakMemoryUsageMB.toFloat() } ?: 1024f
-        
+        val maxMemory = groupedResults.values.flatten()
+            .maxOfOrNull { it.memoryMetrics.peakMemoryUsageMB.toFloat() } ?: 1024f
+
         return groupedResults.map { (provider, results) ->
             val avgMemory = results.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }.average()
             val width = (avgMemory / maxMemory * 300).toInt()
@@ -354,7 +397,7 @@ class BenchmarkReportExporter @Inject constructor(
                 LLMProvider.LITE_RT -> "bar-litert"
                 LLMProvider.GEMINI_NANO -> "bar-gemini"
             }
-            
+
             """
             <div class="bar-chart">
                 <div class="bar-label">${provider.displayName}</div>
@@ -363,10 +406,11 @@ class BenchmarkReportExporter @Inject constructor(
             """
         }.joinToString("")
     }
-    
+
     private fun createBatteryChart(groupedResults: Map<LLMProvider, List<BenchmarkResult>>): String {
-        val maxBattery = groupedResults.values.flatten().maxOfOrNull { it.batteryMetrics.batteryDrain } ?: 10f
-        
+        val maxBattery =
+            groupedResults.values.flatten().maxOfOrNull { it.batteryMetrics.batteryDrain } ?: 10f
+
         return groupedResults.map { (provider, results) ->
             val avgBattery = results.map { it.batteryMetrics.batteryDrain.toDouble() }.average()
             val width = (avgBattery / maxBattery * 300).toInt()
@@ -375,11 +419,16 @@ class BenchmarkReportExporter @Inject constructor(
                 LLMProvider.LITE_RT -> "bar-litert"
                 LLMProvider.GEMINI_NANO -> "bar-gemini"
             }
-            
+
             """
             <div class="bar-chart">
                 <div class="bar-label">${provider.displayName}</div>
-                <div class="bar $barClass" style="width: ${width}px;">${String.format("%.2f", avgBattery)}%</div>
+                <div class="bar $barClass" style="width: ${width}px;">${
+                String.format(
+                    "%.2f",
+                    avgBattery
+                )
+            }%</div>
             </div>
             """
         }.joinToString("")

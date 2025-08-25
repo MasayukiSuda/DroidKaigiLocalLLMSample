@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model.ModelInfo
 
@@ -45,6 +47,7 @@ fun SettingsScreen(
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     val availableProviders by viewModel.availableProviders.collectAsState()
     val geminiNanoCompatibility by viewModel.geminiNanoCompatibility.collectAsState()
+    val isBenchmarkMode by BenchmarkMode.isEnabled.collectAsState()
 
     Column(
         modifier = Modifier
@@ -88,6 +91,62 @@ fun SettingsScreen(
                         text = "モデルファイルを手動でダウンロードし、app/src/main/assets/models/ に配置してください。詳細はREADMEを参照してください。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // ベンチマークモードの説明
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isBenchmarkMode) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    Icons.Default.Tune,
+                    contentDescription = "ベンチマークモード",
+                    modifier = Modifier.padding(end = 12.dp),
+                    tint = if (isBenchmarkMode) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+                Column {
+                    Text(
+                        text = if (isBenchmarkMode) "ベンチマークモード: 有効" else "ベンチマークモード: 無効",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isBenchmarkMode) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                    Text(
+                        text = if (isBenchmarkMode) {
+                            "全プロバイダーで統一プロンプトを使用中。Session Proposalで約束した「同一プロンプト・同一端末でのベンチマーク」を実現します。"
+                        } else {
+                            "各プロバイダー向けに最適化されたプロンプトを使用中。実用性を重視した設定です。"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isBenchmarkMode) {
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }

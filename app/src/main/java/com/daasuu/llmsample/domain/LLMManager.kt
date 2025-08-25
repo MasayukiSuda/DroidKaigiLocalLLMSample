@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,20 +14,20 @@ import javax.inject.Singleton
 class LLMManager @Inject constructor(
     private val repositories: Map<LLMProvider, @JvmSuppressWildcards LLMRepository>
 ) {
-    
+
     private val _currentProvider = MutableStateFlow(LLMProvider.LITE_RT)
     val currentProvider: StateFlow<LLMProvider> = _currentProvider.asStateFlow()
-    
+
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
-    
+
     // ベンチマーク実行中フラグ
     private val _isBenchmarkRunning = MutableStateFlow(false)
     val isBenchmarkRunning: StateFlow<Boolean> = _isBenchmarkRunning.asStateFlow()
-    
+
     // プロバイダー切り替えの排他制御
     private val providerSwitchMutex = kotlinx.coroutines.sync.Mutex()
-    
+
     suspend fun initialize(provider: LLMProvider) {
         repositories[provider]?.let { repo ->
             repo.initialize()
@@ -36,39 +35,39 @@ class LLMManager @Inject constructor(
             _isInitialized.value = repo.isAvailable()
         }
     }
-    
+
     suspend fun switchProvider(provider: LLMProvider) {
         // Release current provider
         getCurrentRepository()?.release()
-        
+
         // Initialize new provider
         initialize(provider)
     }
-    
+
     suspend fun generateChatResponse(prompt: String): Flow<String> {
         ensureInitialized()
-        return getCurrentRepository()?.generateChatResponse(prompt) 
+        return getCurrentRepository()?.generateChatResponse(prompt)
             ?: throw IllegalStateException("No repository available for current provider")
     }
-    
+
     suspend fun summarizeText(text: String): Flow<String> {
         ensureInitialized()
         return getCurrentRepository()?.summarizeText(text)
             ?: throw IllegalStateException("No repository available for current provider")
     }
-    
+
     suspend fun proofreadText(text: String): Flow<String> {
         ensureInitialized()
         return getCurrentRepository()?.proofreadText(text)
             ?: throw IllegalStateException("No repository available for current provider")
     }
-    
+
     suspend fun setCurrentProvider(provider: LLMProvider) {
         providerSwitchMutex.withLock {
             if (_currentProvider.value != provider) {
                 // Release current provider
                 getCurrentRepository()?.release()
-                
+
                 // プロバイダーを変更（初期化は遅延実行）
                 _currentProvider.value = provider
                 _isInitialized.value = false
@@ -77,7 +76,7 @@ class LLMManager @Inject constructor(
             // initialize(provider) は必要時に実行
         }
     }
-    
+
     /**
      * 必要時に初期化を実行
      */
@@ -86,36 +85,36 @@ class LLMManager @Inject constructor(
             initialize(_currentProvider.value)
         }
     }
-    
+
     /**
      * ベンチマーク専用のプロバイダー設定（低優先度で実行）
      */
     suspend fun setProviderForBenchmark(provider: LLMProvider) {
         // ベンチマーク実行フラグを設定
         _isBenchmarkRunning.value = true
-        
+
         // ユーザー操作が進行中の場合は少し待機
         providerSwitchMutex.withLock {
             if (_currentProvider.value != provider) {
                 // 現在のリポジトリを保持（ユーザー操作用）
                 val userRepository = getCurrentRepository()
-                
+
                 // ベンチマーク用のプロバイダーを初期化
                 initialize(provider)
             }
         }
     }
-    
+
     /**
      * ベンチマーク終了時の処理
      */
     suspend fun finishBenchmark() {
         _isBenchmarkRunning.value = false
-        
+
         // 元のプロバイダーに戻す処理は必要に応じて実装
         // 現在は最後に使用されたプロバイダーのままにしておく
     }
-    
+
     /**
      * ユーザー操作による影響を考慮したベンチマーク用タスク実行
      */
@@ -131,13 +130,13 @@ class LLMManager @Inject constructor(
             TaskType.PROOFREADING -> getCurrentRepository()?.proofreadText(input)
         } ?: throw IllegalStateException("No repository available for current provider")
     }
-    
+
     fun getCurrentModelName(): String? {
         return getCurrentRepository()?.let { repo ->
             "${_currentProvider.value.displayName} Model"
         }
     }
-    
+
     fun getCurrentModelSize(): Float {
         return getCurrentRepository()?.let { repo ->
             // モデルサイズを取得（実装は各リポジトリに依存）
@@ -148,7 +147,7 @@ class LLMManager @Inject constructor(
             }
         } ?: 0f
     }
-    
+
     private fun getCurrentRepository(): LLMRepository? {
         return repositories[_currentProvider.value]
     }

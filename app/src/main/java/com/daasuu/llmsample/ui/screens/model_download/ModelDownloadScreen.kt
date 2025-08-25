@@ -1,12 +1,23 @@
 package com.daasuu.llmsample.ui.screens.model_download
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -21,7 +32,7 @@ fun ModelDownloadScreen(
 ) {
     val models by viewModel.models.collectAsState()
     val downloadingModels by viewModel.downloadingModels.collectAsState()
-    
+
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(16.dp),
@@ -78,7 +89,7 @@ private fun ModelItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 when {
                     downloadProgress != null -> {
                         Column(
@@ -94,6 +105,7 @@ private fun ModelItem(
                             )
                         }
                     }
+
                     model.isDownloaded -> {
                         Button(
                             onClick = onDeleteClick,
@@ -104,6 +116,7 @@ private fun ModelItem(
                             Text("削除")
                         }
                     }
+
                     else -> {
                         Button(onClick = onDownloadClick) {
                             Text("ダウンロード")

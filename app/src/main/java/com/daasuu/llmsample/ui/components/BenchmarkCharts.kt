@@ -1,28 +1,32 @@
 package com.daasuu.llmsample.ui.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.Divider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.daasuu.llmsample.data.benchmark.BenchmarkResult
 import com.daasuu.llmsample.data.model.LLMProvider
-import kotlin.math.max
 
 @Composable
 fun BenchmarkResultsCharts(
@@ -41,7 +45,7 @@ fun BenchmarkResultsCharts(
                 fontWeight = FontWeight.Bold
             )
         }
-        
+
         if (results.isNotEmpty()) {
             item {
                 Card(
@@ -53,7 +57,7 @@ fun BenchmarkResultsCharts(
                     )
                 }
             }
-            
+
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth()
@@ -64,7 +68,7 @@ fun BenchmarkResultsCharts(
                     )
                 }
             }
-            
+
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth()
@@ -75,7 +79,7 @@ fun BenchmarkResultsCharts(
                     )
                 }
             }
-            
+
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth()
@@ -121,15 +125,20 @@ fun LatencyComparisonChart(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         val groupedResults = results.groupBy { it.provider }
         val maxLatency = results.maxOfOrNull { it.latencyMetrics.totalLatency.toFloat() } ?: 1000f
-        
+
         groupedResults.forEach { (provider, providerResults) ->
-            val avgLatency = providerResults.map { it.latencyMetrics.totalLatency.toDouble() }.average().toFloat()
-            val avgFirstToken = providerResults.map { it.latencyMetrics.firstTokenLatency.toDouble() }.average().toFloat()
-            val interferenceCount = providerResults.count { it.latencyMetrics.userInterferenceDetected }
-            
+            val avgLatency =
+                providerResults.map { it.latencyMetrics.totalLatency.toDouble() }.average()
+                    .toFloat()
+            val avgFirstToken =
+                providerResults.map { it.latencyMetrics.firstTokenLatency.toDouble() }.average()
+                    .toFloat()
+            val interferenceCount =
+                providerResults.count { it.latencyMetrics.userInterferenceDetected }
+
             ProviderLatencyBar(
                 provider = provider,
                 totalLatency = avgLatency,
@@ -166,7 +175,7 @@ fun ProviderLatencyBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -180,7 +189,7 @@ fun ProviderLatencyBar(
                     .clip(RoundedCornerShape(4.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
-            
+
             // First token latency (darker)
             Box(
                 modifier = Modifier
@@ -189,7 +198,7 @@ fun ProviderLatencyBar(
                     .clip(RoundedCornerShape(4.dp))
                     .background(getProviderColor(provider).copy(alpha = 0.8f))
             )
-            
+
             // Total latency (lighter)
             Box(
                 modifier = Modifier
@@ -214,13 +223,16 @@ fun MemoryUsageChart(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         val groupedResults = results.groupBy { it.provider }
-        val maxMemory = results.maxOfOrNull { it.memoryMetrics.peakMemoryUsageMB.toFloat() } ?: 1024f
-        
+        val maxMemory =
+            results.maxOfOrNull { it.memoryMetrics.peakMemoryUsageMB.toFloat() } ?: 1024f
+
         groupedResults.forEach { (provider, providerResults) ->
-            val avgMemory = providerResults.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }.average().toFloat()
-            
+            val avgMemory =
+                providerResults.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }.average()
+                    .toFloat()
+
             ProviderMemoryBar(
                 provider = provider,
                 memoryUsage = avgMemory,
@@ -255,7 +267,7 @@ fun ProviderMemoryBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -269,7 +281,7 @@ fun ProviderMemoryBar(
                     .clip(RoundedCornerShape(4.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
-            
+
             // Memory usage bar
             Box(
                 modifier = Modifier
@@ -294,13 +306,15 @@ fun BatteryConsumptionChart(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         val groupedResults = results.groupBy { it.provider }
         val maxConsumption = results.maxOfOrNull { it.batteryMetrics.batteryDrain } ?: 10f
-        
+
         groupedResults.forEach { (provider, providerResults) ->
-            val avgConsumption = providerResults.map { it.batteryMetrics.batteryDrain.toDouble() }.average().toFloat()
-            
+            val avgConsumption =
+                providerResults.map { it.batteryMetrics.batteryDrain.toDouble() }.average()
+                    .toFloat()
+
             ProviderBatteryBar(
                 provider = provider,
                 batteryConsumption = avgConsumption,
@@ -335,7 +349,7 @@ fun ProviderBatteryBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -349,7 +363,7 @@ fun ProviderBatteryBar(
                     .clip(RoundedCornerShape(4.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
-            
+
             // Battery consumption bar
             Box(
                 modifier = Modifier
@@ -374,9 +388,9 @@ fun ProviderComparisonTable(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         val groupedResults = results.groupBy { it.provider }
-        
+
         // Header
         Row(
             modifier = Modifier
@@ -413,12 +427,15 @@ fun ProviderComparisonTable(
                 modifier = Modifier.weight(1f)
             )
         }
-        
+
         groupedResults.forEach { (provider, providerResults) ->
-            val avgLatency = providerResults.map { it.latencyMetrics.totalLatency.toDouble() }.average()
-            val avgMemory = providerResults.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }.average()
-            val avgBattery = providerResults.map { it.batteryMetrics.batteryDrain.toDouble() }.average()
-            
+            val avgLatency =
+                providerResults.map { it.latencyMetrics.totalLatency.toDouble() }.average()
+            val avgMemory =
+                providerResults.map { it.memoryMetrics.peakMemoryUsageMB.toDouble() }.average()
+            val avgBattery =
+                providerResults.map { it.batteryMetrics.batteryDrain.toDouble() }.average()
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -449,7 +466,7 @@ fun ProviderComparisonTable(
                     modifier = Modifier.weight(1f)
                 )
             }
-            
+
             Divider(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 thickness = 0.5.dp

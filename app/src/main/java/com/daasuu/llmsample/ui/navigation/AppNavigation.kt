@@ -7,7 +7,6 @@ import androidx.navigation.compose.composable
 import com.daasuu.llmsample.ui.screens.chat.ChatScreen
 import com.daasuu.llmsample.ui.screens.proofread.ProofreadScreen
 import com.daasuu.llmsample.ui.screens.summarize.SummarizeScreen
-import com.daasuu.llmsample.ui.screens.benchmark.BenchmarkDashboardScreen
 
 @Composable
 fun AppNavigation(

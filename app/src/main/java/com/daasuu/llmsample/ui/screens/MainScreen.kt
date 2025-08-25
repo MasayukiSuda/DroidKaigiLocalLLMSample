@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,10 +23,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +41,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.ui.navigation.AppNavigation
 import com.daasuu.llmsample.ui.navigation.BottomNavItem
 import com.daasuu.llmsample.ui.screens.benchmark.BenchmarkDashboardScreen
@@ -59,12 +63,31 @@ fun MainScreen() {
     var showSettings by remember { mutableStateOf(false) }
     var showBenchmark by remember { mutableStateOf(false) }
     var showModelDownload by remember { mutableStateOf(false) }
+    
+    // ベンチマークモードの状態を監視
+    val isBenchmarkMode by BenchmarkMode.isEnabled.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("DroidKaigi LLM Sample") },
                 actions = {
+                    // ベンチマークモードトグル
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "ベンチマークモード",
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Switch(
+                            checked = isBenchmarkMode,
+                            onCheckedChange = { BenchmarkMode.setEnabled(it) }
+                        )
+                    }
+                    
                     IconButton(onClick = { showModelDownload = true }) {
                         Icon(Icons.Default.Download, contentDescription = "モデル管理")
                     }

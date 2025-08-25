@@ -15,7 +15,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import java.io.File
 import java.io.RandomAccessFile
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,15 +26,16 @@ import javax.inject.Singleton
 class PerformanceMonitor @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    private val activityManager =
+        context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
     private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    
+
     private var monitoringStartTime: Long = 0L
     private var baselineMemory: Long = 0L
     private var baselineBatteryLevel: Float = 0f
     private val memorySnapshots = mutableListOf<Long>()
-    
+
     /**
      * 監視を開始
      */
@@ -44,18 +44,18 @@ class PerformanceMonitor @Inject constructor(
         baselineMemory = getCurrentMemoryUsage()
         baselineBatteryLevel = getCurrentBatteryLevel()
         memorySnapshots.clear()
-        
+
         // ベースラインメモリを記録
         android.util.Log.d("PerformanceMonitor", "Baseline memory: ${baselineMemory}MB")
     }
-    
+
     /**
      * メモリ使用量の継続監視（効率化版）
      */
     fun monitorMemoryUsage(): Flow<Long> = flow {
         var sampleCount = 0
         val maxSamples = 300 // 最大5分間のサンプリング（1秒間隔）
-        
+
         while (sampleCount < maxSamples) {
             val memoryUsage = getCurrentMemoryUsage()
             memorySnapshots.add(memoryUsage)
@@ -64,7 +64,7 @@ class PerformanceMonitor @Inject constructor(
             delay(1000) // 1秒間隔に変更してリソース使用量を削減
         }
     }
-    
+
     /**
      * 現在のメモリ使用量を取得 (MB)
      */
@@ -73,14 +73,14 @@ class PerformanceMonitor @Inject constructor(
         activityManager.getMemoryInfo(memoryInfo)
         return (memoryInfo.totalMem - memoryInfo.availMem) / (1024 * 1024)
     }
-    
+
     /**
      * ピークメモリ使用量を取得
      */
     fun getPeakMemoryUsage(): Long {
         return memorySnapshots.maxOrNull() ?: getCurrentMemoryUsage()
     }
-    
+
     /**
      * 平均メモリ使用量を取得
      */
@@ -91,19 +91,20 @@ class PerformanceMonitor @Inject constructor(
             getCurrentMemoryUsage()
         }
     }
-    
+
     /**
      * メモリ増加量を取得
      */
     fun getMemoryIncrease(): Long {
         return getCurrentMemoryUsage() - baselineMemory
     }
-    
+
     /**
      * 現在のバッテリーレベルを取得 (%)
      */
     fun getCurrentBatteryLevel(): Float {
-        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryIntent =
+            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         return batteryIntent?.let { intent ->
             val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
@@ -112,30 +113,31 @@ class PerformanceMonitor @Inject constructor(
             } else 0f
         } ?: 0f
     }
-    
+
     /**
      * バッテリー情報を取得
      */
     fun getBatteryInfo(): BatteryMetrics {
-        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryIntent =
+            context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val currentLevel = getCurrentBatteryLevel()
         val isCharging = batteryIntent?.let { intent ->
             val plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)
-            plugged == BatteryManager.BATTERY_PLUGGED_AC || 
-            plugged == BatteryManager.BATTERY_PLUGGED_USB || 
-            plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS
+            plugged == BatteryManager.BATTERY_PLUGGED_AC ||
+                    plugged == BatteryManager.BATTERY_PLUGGED_USB ||
+                    plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS
         } ?: false
-        
+
         val temperature = batteryIntent?.let { intent ->
             intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1).let { temp ->
                 if (temp != -1) temp / 10f else null
             }
         }
-        
+
         val batteryDrain = baselineBatteryLevel - currentLevel
         val elapsedHours = (System.currentTimeMillis() - monitoringStartTime) / (1000f * 60f * 60f)
         val estimatedDrainPerHour = if (elapsedHours > 0) batteryDrain / elapsedHours else 0f
-        
+
         return BatteryMetrics(
             batteryLevelBefore = baselineBatteryLevel,
             batteryLevelAfter = currentLevel,
@@ -145,20 +147,20 @@ class PerformanceMonitor @Inject constructor(
             batteryTemperature = temperature
         )
     }
-    
+
     /**
      * デバイス情報を取得
      */
     fun getDeviceInfo(): DeviceInfo {
         val memoryInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memoryInfo)
-        
+
         val availableStorage = getAvailableStorage()
         val displayMetrics = DisplayMetrics()
-        
+
         @Suppress("DEPRECATION")
         windowManager.defaultDisplay.getMetrics(displayMetrics)
-        
+
         return DeviceInfo(
             manufacturer = Build.MANUFACTURER,
             model = Build.MODEL,
@@ -171,7 +173,7 @@ class PerformanceMonitor @Inject constructor(
             thermalState = getThermalState()
         )
     }
-    
+
     /**
      * 利用可能ストレージを取得 (GB)
      */
@@ -181,7 +183,7 @@ class PerformanceMonitor @Inject constructor(
         val availableBytes = stat.availableBlocksLong * stat.blockSizeLong
         return availableBytes / (1024 * 1024 * 1024)
     }
-    
+
     /**
      * サーマル状態を取得
      */
@@ -192,7 +194,7 @@ class PerformanceMonitor @Inject constructor(
             null
         }
     }
-    
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun getThermalStateQ(): String {
         return when (powerManager.currentThermalStatus) {
@@ -206,14 +208,14 @@ class PerformanceMonitor @Inject constructor(
             else -> "UNKNOWN"
         }
     }
-    
+
     /**
      * CPUコア数を取得
      */
     fun getCpuCoreCount(): Int {
         return Runtime.getRuntime().availableProcessors()
     }
-    
+
     /**
      * CPU使用率を取得（簡易版）
      */
@@ -222,36 +224,36 @@ class PerformanceMonitor @Inject constructor(
             val reader = RandomAccessFile("/proc/stat", "r")
             val load = reader.readLine()
             reader.close()
-            
+
             val toks = load.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val idle1 = toks[4].toLong()
-            val cpu1 = toks[2].toLong() + toks[3].toLong() + toks[5].toLong() + 
-                      toks[6].toLong() + toks[7].toLong() + toks[8].toLong()
-            
+            val cpu1 = toks[2].toLong() + toks[3].toLong() + toks[5].toLong() +
+                    toks[6].toLong() + toks[7].toLong() + toks[8].toLong()
+
             Thread.sleep(100)
-            
+
             val reader2 = RandomAccessFile("/proc/stat", "r")
             val load2 = reader2.readLine()
             reader2.close()
-            
+
             val toks2 = load2.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val idle2 = toks2[4].toLong()
-            val cpu2 = toks2[2].toLong() + toks2[3].toLong() + toks2[5].toLong() + 
-                       toks2[6].toLong() + toks2[7].toLong() + toks2[8].toLong()
-            
+            val cpu2 = toks2[2].toLong() + toks2[3].toLong() + toks2[5].toLong() +
+                    toks2[6].toLong() + toks2[7].toLong() + toks2[8].toLong()
+
             ((cpu2 - cpu1).toFloat()) / ((cpu2 + idle2) - (cpu1 + idle1)) * 100f
         } catch (e: Exception) {
             0f
         }
     }
-    
+
     /**
      * プロセスの詳細メモリ情報を取得
      */
     fun getDetailedMemoryInfo(): Map<String, Long> {
         val pid = android.os.Process.myPid()
         val memoryInfo = activityManager.getProcessMemoryInfo(intArrayOf(pid))
-        
+
         return if (memoryInfo.isNotEmpty()) {
             val info = memoryInfo[0]
             mapOf(
@@ -265,7 +267,7 @@ class PerformanceMonitor @Inject constructor(
             emptyMap()
         }
     }
-    
+
     /**
      * ガベージコレクション統計を取得
      */
@@ -278,7 +280,7 @@ class PerformanceMonitor @Inject constructor(
             "usedMemory" to (runtime.totalMemory() - runtime.freeMemory())
         )
     }
-    
+
     /**
      * メモリ監視データをクリア
      */

@@ -2,6 +2,8 @@ package com.daasuu.llmsample.data.llm.task
 
 import android.content.Context
 import android.util.Log
+import com.daasuu.llmsample.data.benchmark.BenchmarkMode
+import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -53,7 +55,15 @@ class TaskRepository @Inject constructor(
         if (!isInitialized) {
             send("Error: .task model not found"); return@channelFlow
         }
-        val generated = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
+        
+        // ベンチマークモードに応じてプロンプトを処理
+        val finalPrompt = if (BenchmarkMode.isCurrentlyEnabled()) {
+            CommonPrompts.buildChatPrompt(prompt)
+        } else {
+            prompt // 最適化モード: プロンプトをそのまま使用
+        }
+        
+        val generated = withContext(Dispatchers.IO) { runMediaPipeGenerate(finalPrompt) }
         if (generated != null) {
             generated.split(" ").forEach { token ->
                 send("$token ")
@@ -62,7 +72,7 @@ class TaskRepository @Inject constructor(
         } else {
             Log.w(TAG, "MediaPipe generate failed; falling back to mock")
             withContext(Dispatchers.IO) {
-                ("[task mock] Gemma3: $prompt").split(" ").forEach {
+                ("[task mock] Gemma3: $finalPrompt").split(" ").forEach {
                     send(it + " ")
                     delay(20)
                 }
@@ -75,8 +85,14 @@ class TaskRepository @Inject constructor(
         if (!isInitialized) {
             send("Error: .task model not found"); return@channelFlow
         }
-        val full =
-            withContext(Dispatchers.IO) { runMediaPipeGenerate("要約してください: \n\n$text") }
+        
+        val prompt = if (BenchmarkMode.isCurrentlyEnabled()) {
+            CommonPrompts.buildSummarizationPrompt(text)
+        } else {
+            "要約してください: \n\n$text" // 最適化モード: MediaPipe GenAI API向けシンプルプロンプト
+        }
+        
+        val full = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
         send(full ?: ("- 要約(擬似): " + text.take(40) + "..."))
     }
 
@@ -85,25 +101,32 @@ class TaskRepository @Inject constructor(
         if (!isInitialized) {
             send("{}"); return@channelFlow
         }
-        val instruction = """
-            次の入力文を日本語で最小限に校正してください。出力は次のJSONオブジェクトのみとし、余計な説明やマークダウンは一切出力しないでください。
+        
+        val prompt = if (BenchmarkMode.isCurrentlyEnabled()) {
+            CommonPrompts.buildProofreadingPrompt(text)
+        } else {
+            // 最適化モード: MediaPipe GenAI API向け詳細JSON指示
+            val instruction = """
+                次の入力文を日本語で最小限に校正してください。出力は次のJSONオブジェクトのみとし、余計な説明やマークダウンは一切出力しないでください。
 
-            {
-              "corrected_text": "校正後の全文",
-              "corrections": [
                 {
-                  "original": "修正前の語/句",
+                  "corrected_text": "校正後の全文",
+                  "corrections": [
+                    {
+                      "original": "修正前の語/句",
+                    }
+                  ]
                 }
-              ]
-            }
 
-            必須ルール:
-            - フィールド名・キーは上記と完全一致させる（スネークケース）。
-            - 値はJSONとして有効な文字列のみを使用（改行・引用符はエスケープ）。
-            - 入力と同一ならcorrectionsは空配列とし、corrected_textは入力をそのまま返す。
-            - JSON以外のテキストは出力しない。
-        """.trimIndent()
-        val prompt = "$instruction\n\n入力: $text"
+                必須ルール:
+                - フィールド名・キーは上記と完全一致させる（スネークケース）。
+                - 値はJSONとして有効な文字列のみを使用（改行・引用符はエスケープ）。
+                - 入力と同一ならcorrectionsは空配列とし、corrected_textは入力をそのまま返す。
+                - JSON以外のテキストは出力しない。
+            """.trimIndent()
+            "$instruction\n\n入力: $text"
+        }
+        
         val full = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
         send(full ?: "{\"corrected_text\":\"$text\",\"corrections\":[]}")
     }

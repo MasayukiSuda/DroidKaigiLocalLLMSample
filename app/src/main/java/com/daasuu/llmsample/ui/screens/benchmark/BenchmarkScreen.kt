@@ -1,18 +1,39 @@
 package com.daasuu.llmsample.ui.screens.benchmark
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,8 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.daasuu.llmsample.data.benchmark.BenchmarkResult
 import com.daasuu.llmsample.data.benchmark.BenchmarkStats
-import com.daasuu.llmsample.data.benchmark.BenchmarkStatus
-import com.daasuu.llmsample.data.model.LLMProvider
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -224,28 +243,28 @@ private fun BenchmarkProgressCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "プロバイダー: ${progress.currentProvider}",
                 style = MaterialTheme.typography.bodyMedium
             )
-            
+
             Text(
                 text = "テストケース: ${progress.currentTestCase}",
                 style = MaterialTheme.typography.bodyMedium
             )
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             LinearProgressIndicator(
                 progress = { progress.progressPercentage / 100f },
                 modifier = Modifier.fillMaxWidth(),
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "${progress.completedTests} / ${progress.totalTests} テスト完了 (${progress.progressPercentage.roundToInt()}%)",
                 style = MaterialTheme.typography.bodySmall,
@@ -387,7 +406,7 @@ private fun BenchmarkResultCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 if (result.isSuccess) {
                     Icon(
                         Icons.Default.PlayArrow,
@@ -405,7 +424,7 @@ private fun BenchmarkResultCard(
 
             if (result.isSuccess) {
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -423,9 +442,9 @@ private fun BenchmarkResultCard(
                         value = "${result.memoryMetrics.peakMemoryUsageMB}MB"
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -443,11 +462,11 @@ private fun BenchmarkResultCard(
                         value = "${result.qualityMetrics.outputTokens}"
                     )
                 }
-                
+
                 // 干渉情報も表示
                 if (result.latencyMetrics.userInterferenceDetected) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -458,7 +477,12 @@ private fun BenchmarkResultCard(
                         )
                         MetricItem(
                             label = "偏差",
-                            value = "${String.format("%.1f", result.latencyMetrics.baselineDeviation)}%"
+                            value = "${
+                                String.format(
+                                    "%.1f",
+                                    result.latencyMetrics.baselineDeviation
+                                )
+                            }%"
                         )
                         MetricItem(
                             label = "同時操作",
