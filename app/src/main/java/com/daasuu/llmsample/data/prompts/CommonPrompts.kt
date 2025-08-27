@@ -6,7 +6,7 @@ package com.daasuu.llmsample.data.prompts
  * 全プロバイダーで共通使用可能なプロンプトを定義
  */
 object CommonPrompts {
-    
+
     /**
      * チャット機能用の統一プロンプト
      * 最もシンプルで公平な形式 - ユーザーメッセージをそのまま使用
@@ -14,7 +14,7 @@ object CommonPrompts {
     fun buildChatPrompt(userMessage: String): String {
         return userMessage.trim()
     }
-    
+
     /**
      * 要約機能用の統一プロンプト
      * 中間的な詳細レベルで、全プロバイダーが理解可能な形式
@@ -22,10 +22,10 @@ object CommonPrompts {
     fun buildSummarizationPrompt(text: String): String {
         val cleanText = text.trim()
         if (cleanText.isEmpty()) return "テキストが空です。"
-        
-        return "以下のテキストを簡潔に要約してください:\n\n$cleanText"
+
+        return "以下の文章を短くわかりやすく要約してください。重要な内容だけを残し、不要な細部は省いてください。出力は日本語で1〜3文にしてください。:\n\n$cleanText"
     }
-    
+
     /**
      * 校正機能用の統一プロンプト
      * 自然言語形式で最も互換性が高い指示
@@ -33,10 +33,10 @@ object CommonPrompts {
     fun buildProofreadingPrompt(text: String): String {
         val cleanText = text.trim()
         if (cleanText.isEmpty()) return "テキストが空です。"
-        
+
         return "以下の文章を校正してください:\n\n$cleanText"
     }
-    
+
     /**
      * 日本語文字を含むかどうかの判定
      * 共通で使用するユーティリティ関数
