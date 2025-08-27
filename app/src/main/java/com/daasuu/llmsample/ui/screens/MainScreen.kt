@@ -63,7 +63,7 @@ fun MainScreen() {
     var showSettings by remember { mutableStateOf(false) }
     var showBenchmark by remember { mutableStateOf(false) }
     var showModelDownload by remember { mutableStateOf(false) }
-    
+
     // ベンチマークモードの状態を監視
     val isBenchmarkMode by BenchmarkMode.isEnabled.collectAsState()
 
@@ -87,7 +87,7 @@ fun MainScreen() {
                             onCheckedChange = { BenchmarkMode.setEnabled(it) }
                         )
                     }
-                    
+
                     IconButton(onClick = { showModelDownload = true }) {
                         Icon(Icons.Default.Download, contentDescription = "モデル管理")
                     }
@@ -231,9 +231,7 @@ fun MainScreen() {
                     }
 
                     // モデルダウンロード内容
-                    ModelDownloadScreen(
-                        onBackClick = { showModelDownload = false }
-                    )
+                    ModelDownloadScreen()
                 }
             }
         }

@@ -199,16 +199,37 @@ class ModelManager @Inject constructor(
                         "llama-3.2-3b",
                         ignoreCase = true
                     ) -> "llama-3.2-3b-instruct-q4_k_m"
-                    fileName.contains("llama-3.2-1b", ignoreCase = true) -> "llama-3.2-1b-instruct-q4_k_m"
-                    fileName.contains("llama-3.1-8b", ignoreCase = true) -> "llama-3.1-8b-instruct-q4_k_m"
-                    fileName.contains("qwen2.5-3b", ignoreCase = true) -> "qwen2.5-3b-instruct-q4_k_m"
+
+                    fileName.contains(
+                        "llama-3.2-1b",
+                        ignoreCase = true
+                    ) -> "llama-3.2-1b-instruct-q4_k_m"
+
+                    fileName.contains(
+                        "llama-3.1-8b",
+                        ignoreCase = true
+                    ) -> "llama-3.1-8b-instruct-q4_k_m"
+
+                    fileName.contains(
+                        "qwen2.5-3b",
+                        ignoreCase = true
+                    ) -> "qwen2.5-3b-instruct-q4_k_m"
+
                     fileName.contains("tinyllama", ignoreCase = true) -> "tinyllama-1.1b-q4"
                     fileName.contains("phi-2", ignoreCase = true) -> "phi-2-q4"
-                    fileName.contains("phi-3.5", ignoreCase = true) -> "phi-3.5-mini-instruct-q4_k_m"
+                    fileName.contains(
+                        "phi-3.5",
+                        ignoreCase = true
+                    ) -> "phi-3.5-mini-instruct-q4_k_m"
+
+
                     fileName.contains("gemma3-2b", ignoreCase = true) -> "gemma3-2b-task"
                     fileName.contains("gemma3-9b", ignoreCase = true) -> "gemma3-9b-task"
                     fileName.contains("gemma3-27b", ignoreCase = true) -> "gemma3-27b-task"
-                    fileName.contains("gemma3", ignoreCase = true) -> "gemma3-2b-task" // Default to 2B
+                    fileName.contains(
+                        "gemma3",
+                        ignoreCase = true
+                    ) -> "gemma3-2b-task" // Default to 2B
                     fileName.contains("mobilevlm", ignoreCase = true) -> "mobilevlm-q4"
                     else -> continue
                 }

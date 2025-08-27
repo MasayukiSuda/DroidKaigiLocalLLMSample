@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,7 +29,6 @@ import com.daasuu.llmsample.data.model.ModelInfo
 @Composable
 fun ModelDownloadScreen(
     viewModel: ModelDownloadViewModel = hiltViewModel(),
-    onBackClick: () -> Unit
 ) {
     val models by viewModel.models.collectAsState()
     val downloadingModels by viewModel.downloadingModels.collectAsState()
@@ -45,6 +45,10 @@ fun ModelDownloadScreen(
                 onDownloadClick = { viewModel.downloadModel(model.id) },
                 onDeleteClick = { viewModel.deleteModel(model.id) }
             )
+        }
+
+        item {
+            Spacer(modifier = Modifier.padding(bottom = 32.dp))
         }
     }
 }
