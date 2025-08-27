@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import javax.inject.Inject
 
 data class ProofreadCorrection(
@@ -42,7 +41,6 @@ class ProofreadViewModel @Inject constructor(
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
     private val _corrections = MutableStateFlow<List<ProofreadCorrection>>(emptyList())
-    val corrections: StateFlow<List<ProofreadCorrection>> = _corrections.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -51,7 +49,6 @@ class ProofreadViewModel @Inject constructor(
     val correctedText: StateFlow<String> = _correctedText.asStateFlow()
 
     private val _rawOutput = MutableStateFlow("")
-    val rawOutput: StateFlow<String> = _rawOutput.asStateFlow()
 
     private var proofreadJob: Job? = null
 
@@ -77,7 +74,7 @@ class ProofreadViewModel @Inject constructor(
         interferenceMonitor.recordUserAction(
             com.daasuu.llmsample.data.benchmark.UserActionType.PROOFREADING
         )
-        
+
         proofreadJob?.cancel()
         proofreadJob = viewModelScope.launch {
             proofreadInternal()
@@ -92,27 +89,20 @@ class ProofreadViewModel @Inject constructor(
 
         try {
             val proofreadFlow = llmManager.proofreadText(_inputText.value)
-            if (proofreadFlow != null) {
-                val resultBuilder = StringBuilder()
-                proofreadFlow.collect { token ->
-                    resultBuilder.append(token)
-                }
+            val resultBuilder = StringBuilder()
+            proofreadFlow.collect { token ->
+                resultBuilder.append(token)
+            }
 
-                val response = resultBuilder.toString().trim()
-                println("Proofread response: $response")
-                _rawOutput.value = response
-                val parsed = parseProofreadResponse(response, _inputText.value)
-                if (parsed != null) {
-                    _correctedText.value = parsed.first
-                    _corrections.value = emptyList()
-                } else {
-                    _correctedText.value = ""
-                    _corrections.value = emptyList()
-                }
-            } else {
+            val response = resultBuilder.toString().trim()
+            println("Proofread response: $response")
+            _rawOutput.value = response
+            if (response.isNotEmpty()) {
+                _correctedText.value = response
                 _corrections.value = emptyList()
+            } else {
                 _correctedText.value = ""
-                _rawOutput.value = ""
+                _corrections.value = emptyList()
             }
         } catch (e: Exception) {
             _corrections.value = emptyList()
@@ -123,32 +113,4 @@ class ProofreadViewModel @Inject constructor(
         }
     }
 
-    private fun parseProofreadResponse(
-        response: String,
-        original: String
-    ): Pair<String, List<ProofreadCorrection>>? {
-        // Try to locate a JSON object in the response
-        val startIdx = response.indexOf('{')
-        val endIdx = response.lastIndexOf('}')
-        if (startIdx == -1 || endIdx == -1 || endIdx <= startIdx) return null
-        val jsonString = response.substring(startIdx, endIdx + 1)
-        return try {
-            val root = JSONObject(jsonString)
-
-            // Accept both corrected_text and correctedText
-            val correctedFromJson = when {
-                root.has("corrected_text") -> root.optString("corrected_text", "")
-                root.has("correctedText") -> root.optString("correctedText", "")
-                else -> ""
-            }.trim()
-
-            if (correctedFromJson.isNotEmpty()) {
-                // correctionsは表示不要なので常に空にする
-                correctedFromJson to emptyList()
-            } else null
-        } catch (e: Exception) {
-            null
-        }
-    }
-    
 }

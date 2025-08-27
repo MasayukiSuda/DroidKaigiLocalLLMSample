@@ -21,10 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,10 +32,8 @@ fun ProofreadScreen(
     viewModel: ProofreadViewModel = hiltViewModel()
 ) {
     val inputText by viewModel.inputText.collectAsState()
-    val corrections by viewModel.corrections.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val correctedText by viewModel.correctedText.collectAsState()
-    val rawOutput by viewModel.rawOutput.collectAsState()
 
     Column(
         modifier = Modifier
@@ -103,10 +99,11 @@ fun ProofreadScreen(
                         }
                     }
 
-                    if (!isLoading && (corrections.isNotEmpty() || correctedText.isNotBlank())) {
+                    if (!isLoading) {
+                        // 校正後の文章表示
                         if (correctedText.isNotBlank()) {
                             Text(
-                                text = "修正後の文章",
+                                text = "校正後の文章",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
@@ -114,66 +111,18 @@ fun ProofreadScreen(
                                 text = correctedText,
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        }
-
-                        Text(
-                            text = "修正前（ハイライト表示）",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = buildHighlightedText(inputText, corrections),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-
-                        corrections.forEach { correction ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp)
-                                ) {
-                                    Text(
-                                        text = "${correction.type}: ${correction.original} → ${correction.suggested}",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    if (correction.explanation.isNotBlank()) {
-                                        Text(
-                                            text = correction.explanation,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else if (!isLoading) {
-                        if (rawOutput.isNotBlank()) {
+                        } else {
                             Text(
-                                text = "モデル出力 (解析できませんでした)",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
+                                text = "校正できませんでした。",
+                                style = MaterialTheme.typography.bodyMedium
                             )
-                            Text(
-                                text = rawOutput,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         }
-                        Text(
-                            text = "修正は見つかりませんでした。",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        // 校正前の文章表示（引数の値をそのまま）
                         Text(
-                            text = "修正前の文章",
+                            text = "校正前の文章",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -196,27 +145,3 @@ fun ProofreadScreen(
     }
 }
 
-@Composable
-fun buildHighlightedText(
-    text: String,
-    corrections: List<ProofreadCorrection>
-): AnnotatedString {
-    return buildAnnotatedString {
-        append(text)
-
-        corrections.forEach { correction ->
-            val start = text.indexOf(correction.original)
-            if (start != -1) {
-                addStyle(
-                    style = SpanStyle(
-                        color = Color.Red,
-                        fontWeight = FontWeight.Bold,
-                        background = Color.Yellow.copy(alpha = 0.3f)
-                    ),
-                    start = start,
-                    end = start + correction.original.length
-                )
-            }
-        }
-    }
-}

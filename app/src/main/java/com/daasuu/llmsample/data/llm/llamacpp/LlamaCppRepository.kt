@@ -247,39 +247,6 @@ class LlamaCppRepository @Inject constructor(
         }
     }
 
-
-    private suspend fun generateResponse(prompt: String, onToken: suspend (String) -> Unit) {
-        firstTokenTime = 0L
-        val startTime = System.currentTimeMillis()
-
-        withContext(Dispatchers.IO) {
-            LlamaCppJNI.generate(
-                modelPtr = modelPtr,
-                prompt = prompt,
-                maxTokens = 512,
-                temperature = 0.7f,
-                topP = 0.9f,
-                callback = object : LlamaCppJNI.GenerationCallback {
-                    override fun onToken(token: String) {
-                        if (firstTokenTime == 0L) {
-                            firstTokenTime = System.currentTimeMillis() - startTime
-                        }
-                        kotlinx.coroutines.runBlocking {
-                            onToken(token)
-                        }
-                    }
-
-                    override fun onComplete() {}
-                    override fun onError(error: String) {
-                        kotlinx.coroutines.runBlocking {
-                            onToken("\nError: $error")
-                        }
-                    }
-                }
-            )
-        }
-    }
-
     private fun buildChatPrompt(userMessage: String): String {
         // ベンチマークモードが有効な場合は統一プロンプトを使用
         if (BenchmarkMode.isCurrentlyEnabled()) {

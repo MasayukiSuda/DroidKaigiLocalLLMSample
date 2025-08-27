@@ -34,7 +34,7 @@ object CommonPrompts {
         val cleanText = text.trim()
         if (cleanText.isEmpty()) return "テキストが空です。"
 
-        return "以下の文章を校正してください:\n\n$cleanText"
+        return "以下の日本語文を正しく自然な表現に直してください。出力は校正後の文章だけを返してください。一番良くできた文章を一文だけ返してください。説明や理由は不要です。:\n\n$cleanText"
     }
 
     /**
@@ -43,13 +43,13 @@ object CommonPrompts {
      */
     fun containsJapanese(text: String): Boolean {
         for (ch in text) {
-            val block = java.lang.Character.UnicodeBlock.of(ch)
-            if (block == java.lang.Character.UnicodeBlock.HIRAGANA ||
-                block == java.lang.Character.UnicodeBlock.KATAKANA ||
-                block == java.lang.Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS ||
-                block == java.lang.Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
-                block == java.lang.Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
-                block == java.lang.Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
+            val block = Character.UnicodeBlock.of(ch)
+            if (block == Character.UnicodeBlock.HIRAGANA ||
+                block == Character.UnicodeBlock.KATAKANA ||
+                block == Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS ||
+                block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
+                block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
+                block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
             ) {
                 return true
             }
