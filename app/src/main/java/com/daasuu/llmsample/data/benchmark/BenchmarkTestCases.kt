@@ -6,7 +6,7 @@ import com.daasuu.llmsample.data.model.TaskType
  * 標準ベンチマークテストケース定義
  */
 object BenchmarkTestCases {
-    
+
     /**
      * チャット機能のテストケース
      */
@@ -52,7 +52,7 @@ object BenchmarkTestCases {
             category = BenchmarkCategory.CODING
         )
     )
-    
+
     /**
      * 要約機能のテストケース
      */
@@ -113,7 +113,7 @@ object BenchmarkTestCases {
             category = BenchmarkCategory.SUMMARIZATION
         )
     )
-    
+
     /**
      * 校正機能のテストケース
      */
@@ -165,7 +165,7 @@ object BenchmarkTestCases {
             category = BenchmarkCategory.PROOFREADING
         )
     )
-    
+
     /**
      * パフォーマンステスト用のテストケース
      */
@@ -206,78 +206,41 @@ object BenchmarkTestCases {
             category = BenchmarkCategory.TECHNICAL
         )
     )
-    
+
     /**
      * すべてのテストケースを取得
      */
     fun getAllTestCases(): List<BenchmarkTestCase> {
         return chatTestCases + summarizationTestCases + proofreadingTestCases + performanceTestCases
     }
-    
+
+
     /**
-     * カテゴリ別のテストケースを取得
+     * 現在選択されているプロバイダーのみでベンチマークセッションを作成
      */
-    fun getTestCasesByCategory(category: BenchmarkCategory): List<BenchmarkTestCase> {
-        return getAllTestCases().filter { it.category == category }
-    }
-    
-    /**
-     * タスクタイプ別のテストケースを取得
-     */
-    fun getTestCasesByTaskType(taskType: TaskType): List<BenchmarkTestCase> {
-        return getAllTestCases().filter { it.taskType == taskType }
-    }
-    
-    /**
-     * 基本的なベンチマークセッションを作成
-     */
-    fun createBasicBenchmarkSession(): BenchmarkSession {
+    fun createCurrentProviderBenchmarkSession(provider: com.daasuu.llmsample.data.model.LLMProvider): BenchmarkSession {
         return BenchmarkSession(
-            name = "基本性能ベンチマーク",
-            description = "全プロバイダーの基本的な性能を比較",
+            name = "${provider.displayName} ベンチマーク",
+            description = "現在選択されているプロバイダー (${provider.displayName}) の性能測定",
             testCases = listOf(
                 chatTestCases[0], // 簡単な挨拶
                 chatTestCases[1], // 技術的な質問
                 summarizationTestCases[0], // 短文の要約
                 proofreadingTestCases[0] // 誤字脱字の修正
             ),
-            providers = listOf(
-                com.daasuu.llmsample.data.model.LLMProvider.LLAMA_CPP,
-                com.daasuu.llmsample.data.model.LLMProvider.LITE_RT,
-                com.daasuu.llmsample.data.model.LLMProvider.GEMINI_NANO
-            )
+            providers = listOf(provider)
         )
     }
-    
+
     /**
-     * 詳細ベンチマークセッションを作成
+     * 現在選択されているプロバイダーで包括的ベンチマークセッションを作成
      */
-    fun createComprehensiveBenchmarkSession(): BenchmarkSession {
+    fun createCurrentProviderComprehensiveBenchmarkSession(provider: com.daasuu.llmsample.data.model.LLMProvider): BenchmarkSession {
         return BenchmarkSession(
-            name = "包括的性能ベンチマーク",
-            description = "全機能・全プロバイダーの詳細な性能比較",
+            name = "${provider.displayName} 包括的ベンチマーク",
+            description = "現在選択されているプロバイダー (${provider.displayName}) での全機能テスト",
             testCases = getAllTestCases(),
-            providers = listOf(
-                com.daasuu.llmsample.data.model.LLMProvider.LLAMA_CPP,
-                com.daasuu.llmsample.data.model.LLMProvider.LITE_RT,
-                com.daasuu.llmsample.data.model.LLMProvider.GEMINI_NANO
-            )
-        )
-    }
-    
-    /**
-     * パフォーマンス重視のベンチマークセッションを作成
-     */
-    fun createPerformanceBenchmarkSession(): BenchmarkSession {
-        return BenchmarkSession(
-            name = "パフォーマンステスト",
-            description = "各プロバイダーの性能限界を測定",
-            testCases = performanceTestCases,
-            providers = listOf(
-                com.daasuu.llmsample.data.model.LLMProvider.LLAMA_CPP,
-                com.daasuu.llmsample.data.model.LLMProvider.LITE_RT,
-                com.daasuu.llmsample.data.model.LLMProvider.GEMINI_NANO
-            )
+            providers = listOf(provider)
         )
     }
 }

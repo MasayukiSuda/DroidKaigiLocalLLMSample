@@ -7,22 +7,23 @@ import com.daasuu.llmsample.data.benchmark.BenchmarkResult
 import com.daasuu.llmsample.data.benchmark.BenchmarkSession
 import com.daasuu.llmsample.data.benchmark.BenchmarkStats
 import com.daasuu.llmsample.data.benchmark.BenchmarkTestCases
-import com.daasuu.llmsample.data.model.LLMProvider
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class BenchmarkViewModel @Inject constructor(
-    private val benchmarkRepository: BenchmarkRepository
+    private val benchmarkRepository: BenchmarkRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BenchmarkUiState())
-    val uiState: StateFlow<BenchmarkUiState> = _uiState.asStateFlow()
 
     val currentSession = benchmarkRepository.currentSession
     val progress = benchmarkRepository.progress
@@ -78,16 +79,18 @@ class BenchmarkViewModel @Inject constructor(
     }
 
     /**
-     * 基本ベンチマークを開始
+     * 現在のプロバイダーのみで基本ベンチマークを開始
      */
-    fun startBasicBenchmark() {
+    fun startCurrentProviderBenchmark() {
         if (_uiState.value.isLoading) return
 
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
-                val session = BenchmarkTestCases.createBasicBenchmarkSession()
+                val currentProvider = settingsRepository.currentProvider.first()
+                val session =
+                    BenchmarkTestCases.createCurrentProviderBenchmarkSession(currentProvider)
                 benchmarkRepository.startBenchmarkSession(session)
 
             } catch (e: Exception) {
@@ -100,16 +103,19 @@ class BenchmarkViewModel @Inject constructor(
     }
 
     /**
-     * 包括的ベンチマークを開始
+     * 現在のプロバイダーのみで包括的ベンチマークを開始
      */
-    fun startComprehensiveBenchmark() {
+    fun startCurrentProviderComprehensiveBenchmark() {
         if (_uiState.value.isLoading) return
 
         viewModelScope.launch {
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
-                val session = BenchmarkTestCases.createComprehensiveBenchmarkSession()
+                val currentProvider = settingsRepository.currentProvider.first()
+                val session = BenchmarkTestCases.createCurrentProviderComprehensiveBenchmarkSession(
+                    currentProvider
+                )
                 benchmarkRepository.startBenchmarkSession(session)
 
             } catch (e: Exception) {
@@ -121,69 +127,6 @@ class BenchmarkViewModel @Inject constructor(
         }
     }
 
-    /**
-     * パフォーマンステストを開始
-     */
-    fun startPerformanceBenchmark() {
-        if (_uiState.value.isLoading) return
-
-        viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-
-                val session = BenchmarkTestCases.createPerformanceBenchmarkSession()
-                benchmarkRepository.startBenchmarkSession(session)
-
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "ベンチマーク開始に失敗しました: ${e.message}"
-                )
-            }
-        }
-    }
-
-    /**
-     * カスタムベンチマークを開始
-     */
-    fun startCustomBenchmark(
-        selectedProviders: List<LLMProvider>,
-        selectedTestCases: List<String>
-    ) {
-        if (_uiState.value.isLoading) return
-
-        viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-
-                val allTestCases = BenchmarkTestCases.getAllTestCases()
-                val filteredTestCases = allTestCases.filter { it.id in selectedTestCases }
-
-                val session = BenchmarkSession(
-                    name = "カスタムベンチマーク",
-                    description = "ユーザー選択によるカスタムベンチマーク",
-                    testCases = filteredTestCases,
-                    providers = selectedProviders
-                )
-
-                benchmarkRepository.startBenchmarkSession(session)
-
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "ベンチマーク開始に失敗しました: ${e.message}"
-                )
-            }
-        }
-    }
-
-    /**
-     * カスタムベンチマークを開始 (簡略版)
-     */
-    fun startCustomBenchmark(selectedProviders: List<LLMProvider>) {
-        val allTestCases = BenchmarkTestCases.getAllTestCases()
-        startCustomBenchmark(selectedProviders, allTestCases.map { it.id })
-    }
 
     /**
      * ベンチマークを停止
@@ -211,60 +154,6 @@ class BenchmarkViewModel @Inject constructor(
             }
         }
     }
-
-    /**
-     * 結果をクリア
-     */
-    fun clearResults() {
-        benchmarkRepository.clearResults()
-        _allResults.value = emptyList()
-        _uiState.value = _uiState.value.copy(
-            currentSession = null,
-            results = emptyList(),
-            stats = null,
-            errorMessage = null
-        )
-    }
-
-    /**
-     * プロバイダー別結果の取得
-     */
-    fun getResultsByProvider(provider: LLMProvider): List<BenchmarkResult> {
-        return _uiState.value.results.filter { it.provider == provider }
-    }
-
-    /**
-     * エラーメッセージをクリア
-     */
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
-    }
-
-    /**
-     * 詳細表示設定の切り替え
-     */
-    fun toggleShowDetails() {
-        _uiState.value = _uiState.value.copy(
-            showDetails = !_uiState.value.showDetails
-        )
-    }
-
-    /**
-     * チャート表示タイプの設定
-     */
-    fun setChartType(chartType: ChartType) {
-        _uiState.value = _uiState.value.copy(selectedChartType = chartType)
-    }
-
-    /**
-     * 利用可能なテストケースを取得
-     */
-    fun getAvailableTestCases() = BenchmarkTestCases.getAllTestCases()
-
-    /**
-     * 利用可能なプロバイダーを取得
-     */
-    fun getAvailableProviders() = LLMProvider.values().toList()
 }
 
 /**

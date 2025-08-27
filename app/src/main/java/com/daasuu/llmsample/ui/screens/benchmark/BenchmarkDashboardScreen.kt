@@ -138,10 +138,8 @@ fun BenchmarkDashboardScreen(
             0 -> CurrentSessionTab(
                 session = currentSession,
                 isRunning = isRunning,
-                onStartBasic = viewModel::startBasicBenchmark,
-                onStartPerformance = viewModel::startPerformanceBenchmark,
-                onStartComprehensive = viewModel::startComprehensiveBenchmark,
-                onStartCustom = viewModel::startCustomBenchmark,
+                onStartCurrentProvider = viewModel::startCurrentProviderBenchmark,
+                onStartCurrentProviderComprehensive = viewModel::startCurrentProviderComprehensiveBenchmark,
                 onStop = viewModel::stopBenchmark,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -201,10 +199,8 @@ fun BenchmarkDashboardScreen(
 fun CurrentSessionTab(
     session: BenchmarkSession?,
     isRunning: Boolean,
-    onStartBasic: () -> Unit,
-    onStartPerformance: () -> Unit,
-    onStartComprehensive: () -> Unit,
-    onStartCustom: (List<LLMProvider>) -> Unit,
+    onStartCurrentProvider: () -> Unit,
+    onStartCurrentProviderComprehensive: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -263,30 +259,16 @@ fun CurrentSessionTab(
                         ) {
                             BenchmarkActionButton(
                                 text = "基本ベンチマーク",
-                                description = "基本的なパフォーマンステスト",
-                                icon = Icons.Default.Speed,
-                                onClick = onStartBasic
+                                description = "選択中プロバイダーでの基本性能測定",
+                                icon = Icons.Default.PlayArrow,
+                                onClick = onStartCurrentProvider
                             )
 
                             BenchmarkActionButton(
-                                text = "パフォーマンステスト",
-                                description = "詳細なメモリ・CPU使用量測定",
-                                icon = Icons.Default.Memory,
-                                onClick = onStartPerformance
-                            )
-
-                            BenchmarkActionButton(
-                                text = "総合ベンチマーク",
-                                description = "全プロバイダーで包括的テスト",
+                                text = "包括的ベンチマーク",
+                                description = "選択中プロバイダーでの詳細テスト",
                                 icon = Icons.Default.Assessment,
-                                onClick = onStartComprehensive
-                            )
-
-                            BenchmarkActionButton(
-                                text = "カスタムテスト",
-                                description = "プロバイダーとテストを選択",
-                                icon = Icons.Default.Settings,
-                                onClick = { onStartCustom(LLMProvider.values().toList()) }
+                                onClick = onStartCurrentProviderComprehensive
                             )
                         }
                     }

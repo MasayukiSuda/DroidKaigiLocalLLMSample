@@ -8,12 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,7 +42,7 @@ class BenchmarkRepository @Inject constructor(
     /**
      * ベンチマークセッションを開始
      */
-    suspend fun startBenchmarkSession(session: BenchmarkSession) {
+    fun startBenchmarkSession(session: BenchmarkSession) {
         if (_currentSession.value?.status == BenchmarkStatus.RUNNING) {
             throw IllegalStateException("Another benchmark session is already running")
         }
@@ -414,42 +412,6 @@ class BenchmarkRepository @Inject constructor(
             bestPerformingProvider = bestProvider,
             worstPerformingProvider = worstProvider
         )
-    }
-
-    /**
-     * プロバイダー別の結果取得
-     */
-    fun getResultsByProvider(provider: LLMProvider): Flow<List<BenchmarkResult>> = flow {
-        results.collect { allResults ->
-            emit(allResults.filter { it.provider == provider })
-        }
-    }
-
-    /**
-     * テストケース別の結果取得
-     */
-    fun getResultsByTestCase(testCaseId: String): Flow<List<BenchmarkResult>> = flow {
-        results.collect { allResults ->
-            emit(allResults.filter { it.testCaseId == testCaseId })
-        }
-    }
-
-    /**
-     * 結果のクリア
-     */
-    fun clearResults() {
-        // 実行中の場合は先に停止
-        if (_currentSession.value?.status == BenchmarkStatus.RUNNING) {
-            stopBenchmarkSession()
-        }
-
-        _results.value = emptyList()
-        _currentSession.value = null
-        _progress.value = BenchmarkProgress()
-
-        // 監視データもクリア
-        performanceMonitor.clearMonitoringData()
-        interferenceMonitor.clearMonitoring()
     }
 }
 
