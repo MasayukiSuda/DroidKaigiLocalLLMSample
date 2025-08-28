@@ -505,7 +505,10 @@ fun RecentRecordCard(record: PerformanceRecord) {
 
 @Composable
 fun DetailedRecordCard(record: PerformanceRecord) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.getDefault()) }
+    var isExporting by remember { mutableStateOf(false) }
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -648,6 +651,56 @@ fun DetailedRecordCard(record: PerformanceRecord) {
                         )
                         .padding(8.dp)
                 )
+            }
+            
+            // エクスポートボタン
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            isExporting = true
+                            try {
+                                val entryPoint = EntryPointAccessors.fromApplication(
+                                    context,
+                                    PerformanceEntryPoint::class.java
+                                )
+                                val reportExporter = entryPoint.performanceReportExporter()
+                                val file = reportExporter.exportSingleRecordToJson(record)
+                                reportExporter.shareReport(file)
+                            } finally {
+                                isExporting = false
+                            }
+                        }
+                    },
+                    enabled = !isExporting,
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (isExporting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.FileDownload,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Text(
+                            text = if (isExporting) "エクスポート中..." else "JSONエクスポート",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             }
         }
     }

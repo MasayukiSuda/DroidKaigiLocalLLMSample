@@ -101,6 +101,28 @@ class PerformanceReportExporter @Inject constructor(
         file
     }
 
+    /**
+     * 単一レコードのJSONエクスポート
+     */
+    suspend fun exportSingleRecordToJson(record: PerformanceRecord): File = withContext(Dispatchers.IO) {
+        val timestamp = dateFormat.format(Date(record.timestamp))
+        val sanitizedProvider = record.provider.displayName.replace(" ", "_").replace("(", "").replace(")", "")
+        val fileName = "performance_record_${sanitizedProvider}_$timestamp.json"
+        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
+
+        val jsonRecord = JSONObject().apply {
+            put("exportTimestamp", System.currentTimeMillis())
+            put("exportDate", readableDateFormat.format(Date()))
+            put("record", recordToJson(record))
+        }
+
+        FileWriter(file).use { writer ->
+            writer.write(jsonRecord.toString(2))
+        }
+
+        file
+    }
+
     fun shareReport(file: File) {
         val uri = FileProvider.getUriForFile(
             context,
