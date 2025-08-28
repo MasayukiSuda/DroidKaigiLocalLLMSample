@@ -74,15 +74,12 @@ class SummarizeViewModel @Inject constructor(
 
         try {
             val summaryFlow = llmManager.summarizeText(_inputText.value)
-            if (summaryFlow != null) {
-                val summaryBuilder = StringBuilder()
-                summaryFlow.collect { token ->
-                    summaryBuilder.append(token)
-                    _summaryText.value = summaryBuilder.toString()
-                }
-            } else {
-                _summaryText.value = "Error: LLM not available"
+            val summaryBuilder = StringBuilder()
+            summaryFlow.collect { token ->
+                summaryBuilder.append(token)
+                _summaryText.value = summaryBuilder.toString()
             }
+            println("[SUMMARIZE] LLM Final Summary: ${summaryBuilder.toString()}")
         } catch (e: Exception) {
             _summaryText.value = "Error: ${e.message}"
         } finally {

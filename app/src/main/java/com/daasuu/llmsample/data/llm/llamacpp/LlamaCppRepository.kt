@@ -115,6 +115,28 @@ class LlamaCppRepository @Inject constructor(
             }
         }
     }
+    
+    /**
+     * 現在のモデルのネイティブメモリ使用量を取得（バイト単位）
+     */
+    fun getModelMemoryUsage(): Long {
+        return if (isInitialized && modelPtr != 0L) {
+            LlamaCppJNI.getMemoryUsage(modelPtr)
+        } else {
+            0L
+        }
+    }
+    
+    /**
+     * 現在のモデルのサイズを取得（MB単位）
+     */
+    fun getModelSizeMB(): Float {
+        return if (isInitialized && modelPtr != 0L) {
+            LlamaCppJNI.getModelSizeMB(modelPtr)
+        } else {
+            0f
+        }
+    }
 
     override suspend fun isAvailable(): Boolean = isInitialized
 

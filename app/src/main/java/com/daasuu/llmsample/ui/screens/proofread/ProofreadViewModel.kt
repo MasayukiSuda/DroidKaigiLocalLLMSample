@@ -95,7 +95,7 @@ class ProofreadViewModel @Inject constructor(
             }
 
             val response = resultBuilder.toString().trim()
-            println("Proofread response: $response")
+            println("[PROOFREAD] LLM Final Response: $response")
             _rawOutput.value = response
             if (response.isNotEmpty()) {
                 _correctedText.value = response

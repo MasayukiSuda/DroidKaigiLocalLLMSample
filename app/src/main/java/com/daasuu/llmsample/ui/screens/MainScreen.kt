@@ -44,7 +44,7 @@ import androidx.navigation.compose.rememberNavController
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.ui.navigation.AppNavigation
 import com.daasuu.llmsample.ui.navigation.BottomNavItem
-import com.daasuu.llmsample.ui.screens.benchmark.BenchmarkDashboardScreen
+import com.daasuu.llmsample.ui.screens.benchmark.PerformanceDashboardScreen
 import com.daasuu.llmsample.ui.screens.model_download.ModelDownloadScreen
 import com.daasuu.llmsample.ui.screens.settings.SettingsScreen
 
@@ -186,8 +186,8 @@ fun MainScreen() {
                         }
                     }
 
-                    // ベンチマーク内容
-                    BenchmarkDashboardScreen(
+                    // パフォーマンス記録内容
+                    PerformanceDashboardScreen(
                         onBack = { showBenchmark = false }
                     )
                 }

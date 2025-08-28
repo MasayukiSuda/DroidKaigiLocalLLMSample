@@ -84,6 +84,7 @@ class ChatViewModel @Inject constructor(
                     }
                     _messages.value = currentMessages
                 }
+                println("[CHAT] LLM Final Response: ${responseBuilder.toString()}")
             } catch (e: Exception) {
                 val errorMessage = ChatMessage(
                     content = "Error: ${e.message}",
