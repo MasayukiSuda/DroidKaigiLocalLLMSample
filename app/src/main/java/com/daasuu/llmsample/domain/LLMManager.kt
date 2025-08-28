@@ -274,47 +274,4 @@ class LLMManager @Inject constructor(
             else -> 0 // 他のプロバイダーはネイティブメモリ使用量を提供しない
         }
     }
-
-    /**
-     * 詳細なメモリ使用量情報を取得（デバッグ・分析用）
-     */
-    private fun getDetailedMemoryUsage(): Map<String, Int> {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val pid = android.os.Process.myPid()
-        val memoryInfo = activityManager.getProcessMemoryInfo(intArrayOf(pid))
-
-        val runtime = Runtime.getRuntime()
-        val jvmUsedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
-
-        // ネイティブメモリ使用量を取得
-        val nativeMemoryMB = getNativeMemoryUsage()
-
-        return if (memoryInfo.isNotEmpty()) {
-            val info = memoryInfo[0]
-            val result = mutableMapOf(
-                "totalPss" to info.totalPss, // プロセス全体（推奨値）
-                "totalPrivateDirty" to info.totalPrivateDirty, // プライベートメモリ
-                "nativePss" to info.nativePss, // ネイティブヒープメモリ
-                "dalvikPss" to info.dalvikPss, // Dalvik（Java）ヒープメモリ
-                "jvmUsed" to jvmUsedMemory.toInt(), // JVMランタイム計算値
-                "otherPss" to info.otherPss // その他のメモリ
-            )
-
-            // プロバイダー固有のネイティブメモリ使用量を追加
-            if (nativeMemoryMB > 0) {
-                result["providerNativeMemory"] = nativeMemoryMB
-                result["provider"] = _currentProvider.value.displayName.hashCode()
-            }
-
-            result
-        } else {
-            mutableMapOf<String, Int>(
-                "jvmUsed" to jvmUsedMemory.toInt()
-            ).apply {
-                if (nativeMemoryMB > 0) {
-                    put("providerNativeMemory", nativeMemoryMB)
-                }
-            }
-        }
-    }
 }
