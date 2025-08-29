@@ -55,14 +55,14 @@ class TaskRepository @Inject constructor(
         if (!isInitialized) {
             send("Error: .task model not found"); return@channelFlow
         }
-        
+
         // ベンチマークモードに応じてプロンプトを処理
         val finalPrompt = if (BenchmarkMode.isCurrentlyEnabled()) {
             CommonPrompts.buildChatPrompt(prompt)
         } else {
             prompt // 最適化モード: プロンプトをそのまま使用
         }
-        
+
         val generated = withContext(Dispatchers.IO) { runMediaPipeGenerate(finalPrompt) }
         if (generated != null) {
             generated.split(" ").forEach { token ->
@@ -85,13 +85,13 @@ class TaskRepository @Inject constructor(
         if (!isInitialized) {
             send("Error: .task model not found"); return@channelFlow
         }
-        
+
         val prompt = if (BenchmarkMode.isCurrentlyEnabled()) {
             CommonPrompts.buildSummarizationPrompt(text)
         } else {
             "要約してください: \n\n$text" // 最適化モード: MediaPipe GenAI API向けシンプルプロンプト
         }
-        
+
         val full = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
         send(full ?: ("- 要約(擬似): " + text.take(40) + "..."))
     }
@@ -101,32 +101,17 @@ class TaskRepository @Inject constructor(
         if (!isInitialized) {
             send("{}"); return@channelFlow
         }
-        
+
         val prompt = if (BenchmarkMode.isCurrentlyEnabled()) {
             CommonPrompts.buildProofreadingPrompt(text)
         } else {
             // 最適化モード: MediaPipe GenAI API向け詳細JSON指示
             val instruction = """
-                次の入力文を日本語で最小限に校正してください。出力は次のJSONオブジェクトのみとし、余計な説明やマークダウンは一切出力しないでください。
-
-                {
-                  "corrected_text": "校正後の全文",
-                  "corrections": [
-                    {
-                      "original": "修正前の語/句",
-                    }
-                  ]
-                }
-
-                必須ルール:
-                - フィールド名・キーは上記と完全一致させる（スネークケース）。
-                - 値はJSONとして有効な文字列のみを使用（改行・引用符はエスケープ）。
-                - 入力と同一ならcorrectionsは空配列とし、corrected_textは入力をそのまま返す。
-                - JSON以外のテキストは出力しない。
+                以下の日本語文を正しく自然な表現に校正してください。出力は校正後の文章だけを返してください。
             """.trimIndent()
             "$instruction\n\n入力: $text"
         }
-        
+
         val full = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
         send(full ?: "{\"corrected_text\":\"$text\",\"corrections\":[]}")
     }

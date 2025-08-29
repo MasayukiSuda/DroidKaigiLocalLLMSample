@@ -34,7 +34,7 @@ object CommonPrompts {
         val cleanText = text.trim()
         if (cleanText.isEmpty()) return "テキストが空です。"
 
-        return "以下の日本語文を正しく自然な表現に直してください。出力は校正後の文章だけを返してください。一番良くできた文章を一文だけ返してください。説明や理由は不要です。:\n\n$cleanText"
+        return "以下の日本語文を正しく自然な表現に校正してください。出力は校正後の文章だけを返してください。:\n\n$cleanText"
     }
 
     /**
