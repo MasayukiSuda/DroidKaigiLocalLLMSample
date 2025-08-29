@@ -1,91 +1,39 @@
 package com.daasuu.llmsample.data.llm.gemini
 
-import android.content.Context
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.domain.LLMRepository
 import com.google.ai.edge.aicore.GenerativeAIException
 import com.google.ai.edge.aicore.GenerativeModel
-import com.google.ai.edge.aicore.generationConfig
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class GeminiNanoRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val compatibilityChecker: GeminiNanoCompatibilityChecker
+    private val modelManager: GeminiNanoModelManager
 ) : LLMRepository {
 
-    private var model: GenerativeModel? = null
-    private var isInitialized = false
-    private var firstTokenTime: Long = 0L
-
     override suspend fun initialize() {
-        if (isInitialized) return
-
-        withContext(Dispatchers.IO) {
-            try {
-                // Check device compatibility first
-                val compatibility = compatibilityChecker.isDeviceSupported()
-                if (compatibility !is DeviceCompatibility.Supported) {
-                    val message = compatibilityChecker.getCompatibilityMessage(compatibility)
-                    println("Gemini Nano initialization failed: $message")
-                    isInitialized = false
-                    return@withContext
-                }
-
-                // Initialize GenerativeModel
-                initGenerativeModel()
-                isInitialized = model != null
-
-                if (isInitialized) {
-                    println("Gemini Nano initialized successfully")
-                } else {
-                    println("Failed to initialize Gemini Nano GenerativeModel")
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                isInitialized = false
-            }
-        }
+        // No-op: ModelManagerが遅延初期化を担当するため、ここでは何もしない
     }
 
     override suspend fun release() {
-        model?.close()
-        model = null
-        isInitialized = false
+        modelManager.releaseModel()
     }
 
     override suspend fun isAvailable(): Boolean {
-        return isInitialized && model != null
-    }
-
-    private fun initGenerativeModel() {
-        try {
-            model = GenerativeModel(
-                generationConfig {
-                    context = this@GeminiNanoRepository.context
-                    temperature = 0.7f
-                    topK = 40
-                    maxOutputTokens = 1000
-                }
-            )
-        } catch (e: Exception) {
-            println("Failed to create GenerativeModel: ${e.message}")
-            model = null
-        }
+        return modelManager.isModelAvailable()
     }
 
     override suspend fun generateChatResponse(prompt: String): Flow<String> = flow {
-        if (!isInitialized || model == null) {
+        val model = modelManager.getOrCreateModel()
+        if (model == null) {
             emit("Error: Gemini Nano not initialized")
             return@flow
         }
@@ -97,11 +45,12 @@ class GeminiNanoRepository @Inject constructor(
             prompt // 最適化モード: プロンプトをそのまま使用（Gemini Nanoの特性を活かす）
         }
 
-        generateStreamingResponse(finalPrompt)
+        generateStreamingResponse(model, finalPrompt)
     }.flowOn(Dispatchers.IO)
 
     override suspend fun summarizeText(text: String): Flow<String> = flow {
-        if (!isInitialized || model == null) {
+        val model = modelManager.getOrCreateModel()
+        if (model == null) {
             emit("Error: Gemini Nano not initialized")
             return@flow
         }
@@ -111,11 +60,12 @@ class GeminiNanoRepository @Inject constructor(
         } else {
             buildSummarizationPrompt(text) // 最適化モード: Gemini Nano向け最適化プロンプト
         }
-        generateStreamingResponse(prompt)
+        generateStreamingResponse(model, prompt)
     }.flowOn(Dispatchers.IO)
 
     override suspend fun proofreadText(text: String): Flow<String> = flow {
-        if (!isInitialized || model == null) {
+        val model = modelManager.getOrCreateModel()
+        if (model == null) {
             emit("Error: Gemini Nano not initialized")
             return@flow
         }
@@ -125,35 +75,36 @@ class GeminiNanoRepository @Inject constructor(
         } else {
             buildProofreadingPrompt(text) // 最適化モード: Gemini Nano向け最適化プロンプト
         }
-        generateStreamingResponse(prompt)
+        generateStreamingResponse(model, prompt)
     }.flowOn(Dispatchers.IO)
 
-
-    private suspend fun FlowCollector<String>.generateStreamingResponse(prompt: String) {
-        firstTokenTime = 0L
+    /**
+     * ストリーミングレスポンスを生成
+     * 各リクエストごとに独立したローカル状態を持つ
+     */
+    private suspend fun FlowCollector<String>.generateStreamingResponse(
+        model: GenerativeModel,
+        prompt: String
+    ) {
         val startTime = System.currentTimeMillis()
+        var firstTokenTime = 0L // ← ローカル変数: リクエストごとに独立
 
         try {
-            if (model != null) {
-                println("🚀 Using real Gemini Nano API for: ${prompt.take(50)}...")
-                // Use streaming generation for real-time response
-                model!!.generateContentStream(prompt)
-                    .onCompletion {
-                        println("✅ Gemini Nano stream completed")
-                    }
-                    .collect { response ->
-                        response.text?.let { text ->
-                            if (firstTokenTime == 0L) {
-                                firstTokenTime = System.currentTimeMillis() - startTime
-                                println("⚡ First token received in ${firstTokenTime}ms")
-                            }
-                            emit(text)
+            println("🚀 Using real Gemini Nano API for: ${prompt.take(50)}...")
+            // Use streaming generation for real-time response
+            model.generateContentStream(prompt)
+                .onCompletion {
+                    println("✅ Gemini Nano stream completed")
+                }
+                .collect { response ->
+                    response.text?.let { text ->
+                        if (firstTokenTime == 0L) {
+                            firstTokenTime = System.currentTimeMillis() - startTime
+                            println("⚡ First token received in ${firstTokenTime}ms")
                         }
+                        emit(text)
                     }
-            } else {
-                // Model not available, use mock response
-                emit("Error: Gemini Nano model not initialized. Please check device compatibility.")
-            }
+                }
         } catch (e: GenerativeAIException) {
             // Handle specific AI generation errors
             println("❌ GenerativeAI Error: ${e.message}")
@@ -168,6 +119,7 @@ class GeminiNanoRepository @Inject constructor(
 
     private suspend fun FlowCollector<String>.mockGenerate(prompt: String, startTime: Long) {
         println("🤖 Using mock response for demonstration")
+        var firstTokenTime = 0L // ← モック用のローカル変数
 
         val response = when {
             prompt.contains("要約") || prompt.lowercase()
@@ -196,7 +148,6 @@ class GeminiNanoRepository @Inject constructor(
         }
     }
 
-
     private fun buildSummarizationPrompt(text: String): String {
         val isJapanese = CommonPrompts.containsJapanese(text)
         if (isJapanese) {
@@ -204,7 +155,6 @@ class GeminiNanoRepository @Inject constructor(
         }
         return "Please summarize the following text concisely:\n\n$text"
     }
-
 
     private fun buildProofreadingPrompt(text: String): String {
         val cleanText = text.trim().take(1200)
