@@ -40,8 +40,8 @@ class PerformanceLogger @Inject constructor(
             provider = provider,
             modelName = modelName,
             taskType = taskType,
-            inputText = inputText.take(200), // 入力は200文字まで記録
-            outputText = outputText.take(500), // 出力は500文字まで記録
+            inputText = inputText, // 入力テキスト全文を記録
+            outputText = outputText, // 出力テキスト全文を記録
 
             latencyMs = latencyMs,
             firstTokenLatencyMs = firstTokenLatencyMs,
