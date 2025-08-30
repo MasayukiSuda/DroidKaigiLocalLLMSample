@@ -4,12 +4,14 @@ import android.content.Context
 import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.prompts.CommonPrompts
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -17,7 +19,8 @@ import javax.inject.Singleton
 
 @Singleton
 class TaskRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository
 ) : LLMRepository {
 
     private val TAG = "TaskGenAI"
@@ -28,24 +31,123 @@ class TaskRepository @Inject constructor(
     private var mpTextGenerator: Any? = null
 
     override suspend fun initialize() {
-        if (isInitialized) return
+        if (isInitialized) {
+            Log.d(TAG, "TaskRepository already initialized, skipping")
+            return
+        }
+        
+        Log.d(TAG, "Initializing TaskRepository...")
         withContext(Dispatchers.IO) {
-            val destDir = File(context.filesDir, "models/lite_rt/gemma3")
-            if (!destDir.exists()) destDir.mkdirs()
-            copyAssets("models/lite_rt/gemma3", destDir)
-            val taskFile = destDir.listFiles()?.firstOrNull { it.extension.equals("task", true) }
-            taskModelPath = taskFile?.absolutePath
-            Log.d(TAG, "taskModelPath=$taskModelPath")
-            isInitialized = taskModelPath != null
-            if (isInitialized) {
-                tryInitMediaPipeGenerator()
-                Log.d(TAG, "mpTextGenerator inited=${mpTextGenerator != null}")
+            try {
+                // 前回のリソースが残っていれば確実にクリア
+                mpTextGenerator?.let {
+                    Log.w(TAG, "Previous generator instance found, clearing...")
+                    mpTextGenerator = null
+                }
+                
+                val destDir = File(context.filesDir, "models/lite_rt/gemma3")
+                if (!destDir.exists()) destDir.mkdirs()
+                copyAssets("models/lite_rt/gemma3", destDir)
+                val taskFile = destDir.listFiles()?.firstOrNull { it.extension.equals("task", true) }
+                taskModelPath = taskFile?.absolutePath
+                Log.d(TAG, "taskModelPath=$taskModelPath")
+                
+                if (taskModelPath != null) {
+                    val isGpuEnabled = settingsRepository.isGpuEnabled.first()
+                    
+                    // エミュレータ検知
+                    val isEmulator = isRunningOnEmulator()
+                    if (isEmulator) {
+                        Log.w(TAG, "Running on emulator, disabling GPU acceleration")
+                    }
+                    
+                    val actualGpuEnabled = isGpuEnabled && !isEmulator
+                    Log.d(TAG, "Starting MediaPipe initialization with GPU=${actualGpuEnabled} (requested: ${isGpuEnabled}, emulator: ${isEmulator})")
+                    
+                    // 段階的初期化: GPU有効 → GPU無効 → 初期化スキップ
+                    var initSuccess = false
+                    
+                    if (actualGpuEnabled) {
+                        try {
+                            Log.d(TAG, "Attempting GPU initialization...")
+                            tryInitMediaPipeGenerator(true)
+                            if (mpTextGenerator != null) {
+                                initSuccess = true
+                                Log.d(TAG, "GPU initialization successful")
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "GPU initialization failed, falling back to CPU: ${e.message}")
+                            mpTextGenerator = null
+                        }
+                    }
+                    
+                    if (!initSuccess) {
+                        try {
+                            Log.d(TAG, "Attempting CPU initialization...")
+                            tryInitMediaPipeGenerator(false)
+                            if (mpTextGenerator != null) {
+                                initSuccess = true
+                                Log.d(TAG, "CPU initialization successful")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "CPU initialization also failed: ${e.message}")
+                            mpTextGenerator = null
+                        }
+                    }
+                    
+                    isInitialized = initSuccess
+                    Log.d(TAG, "TaskRepository initialization completed: ${isInitialized}")
+                } else {
+                    Log.w(TAG, "No .task model file found, TaskRepository not initialized")
+                    isInitialized = false
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "TaskRepository initialization failed", e)
+                mpTextGenerator = null
+                isInitialized = false
             }
         }
     }
 
     override suspend fun release() {
-        isInitialized = false
+        Log.d(TAG, "Releasing TaskRepository...")
+        withContext(Dispatchers.IO) {
+            try {
+                // MediaPipe GenAI インスタンスを明示的にクリア
+                mpTextGenerator?.let { generator ->
+                    try {
+                        // MediaPipe GenAIに終了処理があれば呼び出し
+                        val closeMethod = generator.javaClass.methods.firstOrNull { 
+                            it.name == "close" || it.name == "release" || it.name == "destroy"
+                        }
+                        closeMethod?.invoke(generator)
+                        Log.d(TAG, "MediaPipe generator closed successfully")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to close MediaPipe generator: ${e.message}")
+                    }
+                }
+                
+                mpTextGenerator = null
+                isInitialized = false
+                Log.d(TAG, "TaskRepository released successfully")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during TaskRepository release", e)
+                // エラーがあってもisInitializedをfalseにしてリセット
+                mpTextGenerator = null
+                isInitialized = false
+            }
+        }
+    }
+
+    private fun isRunningOnEmulator(): Boolean {
+        return android.os.Build.FINGERPRINT.startsWith("generic") ||
+                android.os.Build.FINGERPRINT.startsWith("unknown") ||
+                android.os.Build.MODEL.contains("google_sdk") ||
+                android.os.Build.MODEL.contains("Emulator") ||
+                android.os.Build.MODEL.contains("Android SDK") ||
+                android.os.Build.MANUFACTURER.contains("Genymotion") ||
+                android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic") ||
+                "google_sdk" == android.os.Build.PRODUCT
     }
 
     override suspend fun isAvailable(): Boolean = isInitialized
@@ -141,9 +243,14 @@ class TaskRepository @Inject constructor(
         }
     }
 
-    private fun tryInitMediaPipeGenerator() {
+    private fun tryInitMediaPipeGenerator(enableGpu: Boolean = false) {
         val modelPath = taskModelPath ?: return
         val assetRelative = "models/lite_rt/gemma3/" + File(modelPath).name
+        
+        Log.d(TAG, "tryInitMediaPipeGenerator called with enableGpu: $enableGpu")
+        Log.d(TAG, "Model path: $modelPath")
+        Log.d(TAG, "Asset relative path: $assetRelative")
+        
         val candidates = listOf(
             Triple(
                 "com.google.mediapipe.tasks.genai.llminference.LlmInference",
@@ -153,7 +260,7 @@ class TaskRepository @Inject constructor(
         )
         for ((genCls, optCls, baseCls) in candidates) {
             try {
-                Log.d(TAG, "Trying $genCls ...")
+                Log.d(TAG, "Trying $genCls with GPU=$enableGpu...")
                 val genClass = Class.forName(genCls)
                 Log.d(TAG, "Successfully loaded class: ${genClass.name}")
                 var instance: Any? = null
@@ -232,8 +339,8 @@ class TaskRepository @Inject constructor(
                             "GPU related methods: ${gpuMethods.map { it.name }.joinToString(", ")}"
                         )
 
-                        // setPreferredBackend メソッドを使ってGPU設定を試行
-                        try {
+                        // setPreferredBackend メソッドを使ってGPU設定を試行（GPU設定が有効な場合のみ）
+                        if (enableGpu) try {
                             val setPreferredBackendMethod =
                                 optBuilder.javaClass.methods.firstOrNull {
                                     it.name == "setPreferredBackend" && it.parameterTypes.size == 1
@@ -274,6 +381,8 @@ class TaskRepository @Inject constructor(
                             }
                         } catch (t: Throwable) {
                             Log.w(TAG, "Failed to set GPU backend: ${t.message}")
+                        } else {
+                            Log.d(TAG, "GPU backend disabled by user setting")
                         }
 
                         // setModelPath or setModelAssetPath on Options builder (some builds expose this directly)
@@ -325,8 +434,8 @@ class TaskRepository @Inject constructor(
                 }
                 val baseBuilder = baseOptionsClass!!.getMethod("builder").invoke(null)
 
-                // GPU delegate設定を試行（詳細ログ付き）
-                try {
+                // GPU delegate設定を試行（詳細ログ付き）（GPU設定が有効な場合のみ）
+                if (enableGpu) try {
                     Log.d(TAG, "Attempting to set GPU delegate...")
 
                     // まず利用可能なメソッドを確認
@@ -404,6 +513,8 @@ class TaskRepository @Inject constructor(
 
                 } catch (t: Throwable) {
                     Log.w(TAG, "GPU delegate setup failed completely: ${t.message}")
+                } else {
+                    Log.d(TAG, "GPU delegate disabled by user setting")
                 }
 
                 val setModelPath = baseBuilder.javaClass.methods.firstOrNull {
@@ -454,21 +565,37 @@ class TaskRepository @Inject constructor(
     private fun runMediaPipeGenerate(prompt: String): String? {
         val gen = mpTextGenerator ?: return null
         return try {
+            Log.d(TAG, "Starting MediaPipe generation with prompt length: ${prompt.length}")
             val m =
                 gen.javaClass.methods.firstOrNull { (it.name == "generate" || it.name == "generateResponse") && it.parameterTypes.size == 1 && it.parameterTypes[0] == String::class.java }
-            val result = m?.invoke(gen, prompt)
+            
+            if (m == null) {
+                Log.w(TAG, "No suitable generate method found in MediaPipe generator")
+                return null
+            }
+            
+            Log.d(TAG, "Invoking MediaPipe generate method: ${m.name}")
+            val result = m.invoke(gen, prompt)
+            Log.d(TAG, "MediaPipe generation completed, result type: ${result?.javaClass?.simpleName}")
+            
             when (result) {
-                is String -> result
+                is String -> {
+                    Log.d(TAG, "Direct string result, length: ${result.length}")
+                    result
+                }
                 else -> {
+                    Log.d(TAG, "Non-string result, extracting text...")
                     val getText =
                         result?.javaClass?.methods?.firstOrNull { it.name == "getText" && it.parameterTypes.isEmpty() }
                     val getOut =
                         result?.javaClass?.methods?.firstOrNull { it.name == "getOutputText" && it.parameterTypes.isEmpty() }
-                    (getText?.invoke(result) as? String) ?: (getOut?.invoke(result) as? String)
+                    val extractedText = (getText?.invoke(result) as? String) ?: (getOut?.invoke(result) as? String)
+                    Log.d(TAG, "Extracted text length: ${extractedText?.length ?: 0}")
+                    extractedText
                 }
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "generate failed: ${t.message}")
+            Log.e(TAG, "MediaPipe generation failed with exception: ${t.javaClass.simpleName}: ${t.message}", t)
             null
         }
     }

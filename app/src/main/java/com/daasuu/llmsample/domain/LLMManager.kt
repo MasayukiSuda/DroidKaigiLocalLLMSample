@@ -82,6 +82,26 @@ class LLMManager @Inject constructor(
         }
     }
 
+        /**
+     * 現在のプロバイダーを強制的に再初期化する
+     * GPU設定変更など、プロバイダー固有の設定が変更された時に使用
+     */
+    suspend fun reinitializeCurrentProvider() {
+        providerSwitchMutex.withLock {
+            // 現在のプロバイダーをリリース
+            getCurrentRepository()?.release()
+            
+            // ネイティブリソースの解放完了を待つ（短時間）
+            kotlinx.coroutines.delay(100)
+            
+            // 再初期化フラグを設定
+            _isInitialized.value = false
+            
+            // 次回使用時に再初期化される
+            // （必要に応じて即座に初期化も可能）
+        }
+    }
+
     /**
      * 必要時に初期化を実行
      */

@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,170 +46,177 @@ fun SettingsScreen(
 ) {
     val models by viewModel.models.collectAsState()
     val selectedProvider by viewModel.selectedProvider.collectAsState()
-    val availableProviders by viewModel.availableProviders.collectAsState()
-    val geminiNanoCompatibility by viewModel.geminiNanoCompatibility.collectAsState()
     val isBenchmarkMode by BenchmarkMode.isEnabled.collectAsState()
+    val isGpuEnabled by viewModel.isGpuEnabled.collectAsState()
+    val shouldShowGpuSettings = selectedProvider == LLMProvider.LITE_RT
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "モデル管理",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        // モデル配置の説明
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+        item {
+            Text(
+                text = "モデル管理",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    Icons.Default.FolderOpen,
-                    contentDescription = "フォルダ",
-                    modifier = Modifier.padding(end = 12.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+
+            // モデル配置の説明
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
-                Column {
-                    Text(
-                        text = "モデルファイルの配置",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        contentDescription = "フォルダ",
+                        modifier = Modifier.padding(end = 12.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                    Text(
-                        text = "モデルファイルを手動でダウンロードし、app/src/main/assets/models/ に配置してください。詳細はREADMEを参照してください。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Column {
+                        Text(
+                            text = "モデルファイルの配置",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "モデルファイルを手動でダウンロードし、app/src/main/assets/models/ に配置してください。詳細はREADMEを参照してください。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // ベンチマークモードの説明
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isBenchmarkMode) {
-                    MaterialTheme.colorScheme.secondaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                }
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Icon(
-                    Icons.Default.Tune,
-                    contentDescription = "ベンチマークモード",
-                    modifier = Modifier.padding(end = 12.dp),
-                    tint = if (isBenchmarkMode) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
+        item {
+            // ベンチマークモードの説明
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isBenchmarkMode) {
+                        MaterialTheme.colorScheme.secondaryContainer
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        MaterialTheme.colorScheme.surfaceVariant
                     }
                 )
-                Column {
-                    Text(
-                        text = if (isBenchmarkMode) "ベンチマークモード: 有効" else "ベンチマークモード: 無効",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isBenchmarkMode) {
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = "ベンチマークモード",
+                        modifier = Modifier.padding(end = 12.dp),
+                        tint = if (isBenchmarkMode) {
                             MaterialTheme.colorScheme.onSecondaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         }
                     )
-                    Text(
-                        text = if (isBenchmarkMode) {
-                            "全プロバイダーで統一プロンプトを使用中。Session Proposalで約束した「同一プロンプト・同一端末でのベンチマーク」を実現します。"
-                        } else {
-                            "各プロバイダー向けに最適化されたプロンプトを使用中。実用性を重視した設定です。"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isBenchmarkMode) {
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Column {
+                        Text(
+                            text = if (isBenchmarkMode) "ベンチマークモード: 有効" else "ベンチマークモード: 無効",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isBenchmarkMode) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Text(
+                            text = if (isBenchmarkMode) {
+                                "全プロバイダーで統一プロンプトを使用中。Session Proposalで約束した「同一プロンプト・同一端末でのベンチマーク」を実現します。"
+                            } else {
+                                "各プロバイダー向けに最適化されたプロンプトを使用中。実用性を重視した設定です。"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isBenchmarkMode) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // Provider selection
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
+        item {
+            // Provider selection
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
             ) {
-                Text(
-                    text = "現在の LLM プロバイダー",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "現在の LLM プロバイダー",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
 
-                LLMProvider.entries.forEach { provider ->
-                    val isProviderAvailable = viewModel.isProviderAvailable(provider)
-                    val unavailableReason = viewModel.getProviderUnavailableReason(provider)
-                    
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                    LLMProvider.entries.forEach { provider ->
+                        val isProviderAvailable = viewModel.isProviderAvailable(provider)
+                        val unavailableReason = viewModel.getProviderUnavailableReason(provider)
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            RadioButton(
-                                selected = selectedProvider == provider,
-                                onClick = { 
-                                    if (isProviderAvailable) {
-                                        viewModel.selectProvider(provider)
-                                    }
-                                },
-                                enabled = isProviderAvailable
-                            )
-                            Column(
-                                modifier = Modifier.padding(start = 8.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = provider.displayName,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = if (isProviderAvailable) {
-                                            MaterialTheme.colorScheme.onSurface
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                RadioButton(
+                                    selected = selectedProvider == provider,
+                                    onClick = {
+                                        if (isProviderAvailable) {
+                                            viewModel.selectProvider(provider)
                                         }
-                                    )
+                                    },
+                                    enabled = isProviderAvailable
                                 )
-                                
-                                if (!isProviderAvailable && unavailableReason != null) {
+                                Column(
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
                                     Text(
-                                        text = unavailableReason,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.padding(top = 2.dp)
+                                        text = provider.displayName,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = if (isProviderAvailable) {
+                                                MaterialTheme.colorScheme.onSurface
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            }
+                                        )
                                     )
+
+                                    if (!isProviderAvailable && unavailableReason != null) {
+                                        Text(
+                                            text = unavailableReason,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -217,16 +225,60 @@ fun SettingsScreen(
             }
         }
 
-        // Models list
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(models) { model ->
-                ModelCard(
-                    model = model,
-                    onDelete = { viewModel.deleteModel(model.id) }
-                )
+        if (shouldShowGpuSettings) {
+            item {
+                // GPU Settings (only shown when Gemma3/LITE_RT is selected)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "GPU 設定",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "GPU アクセラレーション",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "推論処理にGPUを使用します（MediaPipe GPU Delegate）",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+
+                            Switch(
+                                checked = isGpuEnabled,
+                                onCheckedChange = { viewModel.setGpuEnabled(it) }
+                            )
+                        }
+                    }
+                }
             }
+        }
+
+
+        // Models list
+        items(models) { model ->
+            ModelCard(
+                model = model,
+                onDelete = { viewModel.deleteModel(model.id) }
+            )
         }
     }
 }
