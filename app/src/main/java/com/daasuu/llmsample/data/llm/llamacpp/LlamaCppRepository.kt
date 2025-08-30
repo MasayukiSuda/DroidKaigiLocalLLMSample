@@ -127,17 +127,6 @@ class LlamaCppRepository @Inject constructor(
         }
     }
 
-    /**
-     * 現在のモデルのサイズを取得（MB単位）
-     */
-    fun getModelSizeMB(): Float {
-        return if (isInitialized && modelPtr != 0L) {
-            LlamaCppJNI.getModelSizeMB(modelPtr)
-        } else {
-            0f
-        }
-    }
-
     override suspend fun isAvailable(): Boolean = isInitialized
 
     override suspend fun generateChatResponse(prompt: String): Flow<String> = channelFlow {
@@ -155,7 +144,7 @@ class LlamaCppRepository @Inject constructor(
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
                 prompt = fullPrompt,
-                maxTokens = 160,
+                maxTokens = 1000,
                 temperature = 0.4f,
                 topP = 0.9f,
                 callback = object : LlamaCppJNI.GenerationCallback {
@@ -193,7 +182,7 @@ class LlamaCppRepository @Inject constructor(
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
                 prompt = prompt,
-                maxTokens = 128,
+                maxTokens = 500,
                 temperature = 0.2f,
                 topP = 0.9f,
                 callback = object : LlamaCppJNI.GenerationCallback {
@@ -249,7 +238,7 @@ class LlamaCppRepository @Inject constructor(
             LlamaCppJNI.generate(
                 modelPtr = modelPtr,
                 prompt = prompt,
-                maxTokens = 256,
+                maxTokens = 500,
                 temperature = 0.2f,
                 topP = 0.95f,
                 callback = object : LlamaCppJNI.GenerationCallback {
