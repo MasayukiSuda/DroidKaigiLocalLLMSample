@@ -148,13 +148,14 @@ class TaskRepository @Inject constructor(
             Triple(
                 "com.google.mediapipe.tasks.genai.llminference.LlmInference",
                 "com.google.mediapipe.tasks.genai.llminference.LlmInference\$LlmInferenceOptions",
-                null
+                null // BaseOptionsは別途確認
             )
         )
         for ((genCls, optCls, baseCls) in candidates) {
             try {
                 Log.d(TAG, "Trying $genCls ...")
                 val genClass = Class.forName(genCls)
+                Log.d(TAG, "Successfully loaded class: ${genClass.name}")
                 var instance: Any? = null
 
                 // 1) Prefer simple path: createFromFile(Context, String)
@@ -178,17 +179,105 @@ class TaskRepository @Inject constructor(
                 }
 
                 // 2) Fallback: createFromOptions(Context, Options) if BaseOptions is available
-                val baseOptionsClass = if (baseCls != null) try {
+                var baseOptionsClass = if (baseCls != null) try {
                     Class.forName(baseCls)
                 } catch (_: Throwable) {
                     null
                 } else null
+
+                // Try alternative BaseOptions locations if not found
+                val alternativeBaseOptions = listOf(
+                    "com.google.mediapipe.tasks.core.BaseOptions",
+                    "com.google.mediapipe.framework.MediaPipeException.BaseOptions",
+                    "com.google.mediapipe.tasks.genai.llminference.BaseOptions"
+                )
+
+                for (altBaseOptions in alternativeBaseOptions) {
+                    try {
+                        val altClass = Class.forName(altBaseOptions)
+                        Log.d(TAG, "Found BaseOptions at: $altBaseOptions")
+                        baseOptionsClass = altClass
+                        break
+                    } catch (e: ClassNotFoundException) {
+                        Log.d(TAG, "BaseOptions not found at: $altBaseOptions")
+                    }
+                }
+
                 if (baseOptionsClass == null) {
-                    Log.w(TAG, "BaseOptions class not found for $genCls; trying inner Options only")
+                    Log.w(
+                        TAG,
+                        "BaseOptions class not found in any location for $genCls; trying inner Options only"
+                    )
+                    Log.d(TAG, "Attempting direct LlmInferenceOptions initialization...")
                     // Try builder on LlmInference$LlmInferenceOptions directly
                     try {
                         val optionsClass = Class.forName(optCls)
                         val optBuilder = optionsClass.getMethod("builder").invoke(null)
+
+                        // 利用可能なメソッドをログ出力
+                        Log.d(
+                            TAG,
+                            "Available LlmInferenceOptions builder methods: ${
+                                optBuilder.javaClass.methods.map { "${it.name}(${it.parameterTypes.joinToString { it.simpleName }})" }
+                                    .joinToString(", ")
+                            }"
+                        )
+
+                        // GPU関連メソッドを探す
+                        val gpuMethods = optBuilder.javaClass.methods.filter { method ->
+                            val name = method.name.lowercase()
+                            name.contains("gpu") || name.contains("delegate") || name.contains("acceleration")
+                        }
+                        Log.d(
+                            TAG,
+                            "GPU related methods: ${gpuMethods.map { it.name }.joinToString(", ")}"
+                        )
+
+                        // setPreferredBackend メソッドを使ってGPU設定を試行
+                        try {
+                            val setPreferredBackendMethod =
+                                optBuilder.javaClass.methods.firstOrNull {
+                                    it.name == "setPreferredBackend" && it.parameterTypes.size == 1
+                                }
+
+                            if (setPreferredBackendMethod != null) {
+                                Log.d(
+                                    TAG,
+                                    "Found setPreferredBackend method with parameter type: ${setPreferredBackendMethod.parameterTypes[0].name}"
+                                )
+
+                                // Backend enum のGPU関連値を探す
+                                val backendClass = setPreferredBackendMethod.parameterTypes[0]
+                                val backendConstants = backendClass.enumConstants
+                                Log.d(
+                                    TAG,
+                                    "Available Backend values: ${
+                                        backendConstants?.map { it.toString() }
+                                            ?.joinToString(", ") ?: "none"
+                                    }"
+                                )
+
+                                // GPU関連のBackend値を探して設定
+                                val gpuBackend = backendConstants?.firstOrNull { backend ->
+                                    val backendName = backend.toString().lowercase()
+                                    backendName.contains("gpu") || backendName.contains("opencl") || backendName.contains(
+                                        "vulkan"
+                                    )
+                                }
+
+                                if (gpuBackend != null) {
+                                    setPreferredBackendMethod.invoke(optBuilder, gpuBackend)
+                                    Log.d(TAG, "GPU backend set successfully: $gpuBackend")
+                                } else {
+                                    Log.w(TAG, "No GPU backend found in available options")
+                                }
+                            } else {
+                                Log.d(TAG, "setPreferredBackend method not found")
+                            }
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "Failed to set GPU backend: ${t.message}")
+                        }
+
                         // setModelPath or setModelAssetPath on Options builder (some builds expose this directly)
                         val setModelPath2 = optBuilder.javaClass.methods.firstOrNull {
                             it.name == "setModelPath" && it.parameterTypes.contentEquals(
@@ -225,7 +314,10 @@ class TaskRepository @Inject constructor(
                         }
                         if (instance != null) {
                             mpTextGenerator = instance
-                            Log.d(TAG, "Initialized with $genCls via inner Options")
+                            Log.d(
+                                TAG,
+                                "Initialized with $genCls via LlmInferenceOptions (GPU backend attempted)"
+                            )
                             return
                         }
                     } catch (t: Throwable) {
@@ -233,7 +325,89 @@ class TaskRepository @Inject constructor(
                     }
                     continue
                 }
-                val baseBuilder = baseOptionsClass.getMethod("builder").invoke(null)
+                val baseBuilder = baseOptionsClass!!.getMethod("builder").invoke(null)
+
+                // GPU delegate設定を試行（詳細ログ付き）
+                try {
+                    Log.d(TAG, "Attempting to set GPU delegate...")
+
+                    // まず利用可能なメソッドを確認
+                    Log.d(
+                        TAG,
+                        "Available BaseOptions builder methods: ${
+                            baseBuilder.javaClass.methods.map { it.name }.joinToString(", ")
+                        }"
+                    )
+
+                    // 複数のパターンでGPU delegate設定を試行
+                    var delegateSet = false
+
+                    // パターン1: BaseOptions.Delegate.GPU
+                    try {
+                        val delegateClass =
+                            Class.forName("com.google.mediapipe.tasks.core.BaseOptions\$Delegate")
+                        Log.d(TAG, "Found Delegate class: ${delegateClass.name}")
+                        Log.d(
+                            TAG,
+                            "Available Delegate fields: ${
+                                delegateClass.declaredFields.map { it.name }.joinToString(", ")
+                            }"
+                        )
+                        val gpuDelegate = delegateClass.getDeclaredField("GPU").get(null)
+                        val setDelegate = baseBuilder.javaClass.methods.firstOrNull {
+                            it.name == "setDelegate" && it.parameterTypes.size == 1
+                        }
+                        if (setDelegate != null) {
+                            setDelegate.invoke(baseBuilder, gpuDelegate)
+                            delegateSet = true
+                            Log.d(TAG, "GPU delegate set via BaseOptions.Delegate.GPU")
+                        } else {
+                            Log.w(TAG, "setDelegate method not found")
+                        }
+                    } catch (t1: Throwable) {
+                        Log.w(TAG, "Pattern 1 failed: ${t1.message}")
+                    }
+
+                    // パターン2: useGpu メソッド
+                    if (!delegateSet) {
+                        try {
+                            val useGpuMethod = baseBuilder.javaClass.methods.firstOrNull {
+                                it.name == "useGpu" && it.parameterTypes.isEmpty()
+                            }
+                            if (useGpuMethod != null) {
+                                useGpuMethod.invoke(baseBuilder)
+                                delegateSet = true
+                                Log.d(TAG, "GPU enabled via useGpu() method")
+                            }
+                        } catch (t2: Throwable) {
+                            Log.w(TAG, "Pattern 2 failed: ${t2.message}")
+                        }
+                    }
+
+                    // パターン3: setUseGpu メソッド
+                    if (!delegateSet) {
+                        try {
+                            val setUseGpuMethod = baseBuilder.javaClass.methods.firstOrNull {
+                                it.name == "setUseGpu" && it.parameterTypes.size == 1 && it.parameterTypes[0] == Boolean::class.java
+                            }
+                            if (setUseGpuMethod != null) {
+                                setUseGpuMethod.invoke(baseBuilder, true)
+                                delegateSet = true
+                                Log.d(TAG, "GPU enabled via setUseGpu(true) method")
+                            }
+                        } catch (t3: Throwable) {
+                            Log.w(TAG, "Pattern 3 failed: ${t3.message}")
+                        }
+                    }
+
+                    if (!delegateSet) {
+                        Log.w(TAG, "All GPU delegate patterns failed, using CPU")
+                    }
+
+                } catch (t: Throwable) {
+                    Log.w(TAG, "GPU delegate setup failed completely: ${t.message}")
+                }
+
                 val setModelPath = baseBuilder.javaClass.methods.firstOrNull {
                     it.name == "setModelPath" && it.parameterTypes.contentEquals(arrayOf(String::class.java))
                 }
@@ -267,7 +441,10 @@ class TaskRepository @Inject constructor(
                 }
                 if (instance != null) {
                     mpTextGenerator = instance
-                    Log.d(TAG, "Initialized with $genCls via options")
+                    Log.d(
+                        TAG,
+                        "Initialized with $genCls via BaseOptions (GPU acceleration attempted)"
+                    )
                     return
                 }
             } catch (e: Throwable) {
