@@ -218,8 +218,7 @@ class TaskRepository @Inject constructor(
                         Log.d(
                             TAG,
                             "Available LlmInferenceOptions builder methods: ${
-                                optBuilder.javaClass.methods.map { "${it.name}(${it.parameterTypes.joinToString { it.simpleName }})" }
-                                    .joinToString(", ")
+                                optBuilder.javaClass.methods.joinToString(", ") { "${it.name}(${it.parameterTypes.joinToString { it.simpleName }})" }
                             }"
                         )
 
@@ -252,8 +251,7 @@ class TaskRepository @Inject constructor(
                                 Log.d(
                                     TAG,
                                     "Available Backend values: ${
-                                        backendConstants?.map { it.toString() }
-                                            ?.joinToString(", ") ?: "none"
+                                        backendConstants?.joinToString(", ") { it.toString() } ?: "none"
                                     }"
                                 )
 
