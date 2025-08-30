@@ -115,7 +115,7 @@ class LlamaCppRepository @Inject constructor(
             }
         }
     }
-    
+
     /**
      * 現在のモデルのネイティブメモリ使用量を取得（バイト単位）
      */
@@ -126,7 +126,7 @@ class LlamaCppRepository @Inject constructor(
             0L
         }
     }
-    
+
     /**
      * 現在のモデルのサイズを取得（MB単位）
      */
