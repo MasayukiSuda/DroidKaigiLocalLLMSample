@@ -96,7 +96,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // (準備) .task ランタイムは後続PRで追加予定
-    implementation("com.google.mediapipe:tasks-genai:0.10.25")
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
 
     // Google AI Edge SDK for Gemini Nano experimental access
     implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
