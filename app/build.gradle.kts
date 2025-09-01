@@ -95,7 +95,7 @@ dependencies {
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // (準備) .task ランタイムは後続PRで追加予定
+    // MediaPipe Tasks Inference API
     implementation("com.google.mediapipe:tasks-genai:0.10.27")
 
     // Google AI Edge SDK for Gemini Nano experimental access
