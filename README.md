@@ -43,37 +43,17 @@
 
 Gemini Nanoは以下の端末でのみ利用可能です：
 
-- **Google Pixel シリーズ**
-  - Pixel 8、Pixel 8 Pro、Pixel 8a
+- **Google Pixel9 シリーズ**
   - Pixel 9、Pixel 9 Pro、Pixel 9 Pro XL、Pixel 9 Pro Fold
-
-- **Samsung Galaxy シリーズ**
-  - Galaxy S24、S24+、S24 Ultra、S24 FE
-  - Galaxy Z Fold 6、Z Flip 6
-
-- **その他の対応端末**
-  - Motorola Edge 50 Ultra、Razr 50 Ultra
-  - Xiaomi 14T、14T Pro、MIX Flip
-  - Realme GT 6
 
 ### 端末での設定
 
 Gemini Nanoを有効にするには以下の設定が必要です：
 
-1. **デベロッパーオプションを有効化**
-   - 設定 → システム → 端末情報 → ビルド番号を7回タップ
+1. aicore-experimental Google グループに参加します。
 
-2. **オンデバイスAIを有効化**
-   - 設定 → システム → デベロッパー設定
-   - 「Gemini Nano」または「オンデバイスAI」を有効化
+2. Android AICore テスト プログラムにオプトインする
 
-3. **端末を再起動**
-
-### システム要件
-
-- Android 14以上
-- 対応端末（上記リスト参照）
-- デベロッパーオプションでのGemini Nano有効化
 
 ### 実装について
 
