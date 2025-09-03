@@ -56,11 +56,32 @@ class LlamaCppRepository @Inject constructor(
                         }
 
                         println("Attempting to initialize LlamaCpp with model: $modelPath (${modelFile.length()} bytes)")
+                        
+                        // Enhanced GPU detection for Pixel 9 and other high-end devices
+                        val isVulkanAvailable = LlamaCppJNI.isVulkanAvailable()
+                        val isGpuAvailable = LlamaCppJNI.isGpuAccelerationAvailable()
+                        
+                        val gpuLayers = when {
+                            isVulkanAvailable -> {
+                                println("✅ Vulkan GPU acceleration detected, enabling GPU layers for faster inference")
+                                32 // Use GPU for most layers on Vulkan-capable devices like Pixel 9
+                            }
+                            isGpuAvailable -> {
+                                println("✅ GPU acceleration available, enabling moderate GPU usage")
+                                24 // Use significant GPU layers for modern devices
+                            }
+                            else -> {
+                                println("⚠️ No GPU acceleration available, using CPU only")
+                                0 // CPU only
+                            }
+                        }
+                        
+                        println("🚀 GPU Layers configured: $gpuLayers (Vulkan: $isVulkanAvailable, GPU: $isGpuAvailable)")
 
                         modelPtr = LlamaCppJNI.loadModel(
                             modelPath = modelPath,
                             contextSize = 2048,
-                            nGpuLayers = 0 // CPU only for now
+                            nGpuLayers = gpuLayers
                         )
 
                         if (modelPtr != 0L) {

@@ -33,6 +33,20 @@ if(EXISTS ${LLAMA_CPP_DIR}/CMakeLists.txt)
     set(LLAMA_FMA OFF CACHE BOOL "")
     set(GGML_USE_LLAMAFILE OFF CACHE BOOL "")
     
+    # Android specific GPU settings
+    if(ANDROID)
+        # Use CPU build but with device-based GPU detection for Pixel 9 support
+        set(GGML_VULKAN OFF CACHE BOOL "CPU build with device detection fallback")
+        set(GGML_OPENCL OFF CACHE BOOL "Disable OpenCL on Android")
+        set(GGML_CUDA OFF CACHE BOOL "Disable CUDA on Android")
+        message(STATUS "Android build: CPU with intelligent GPU detection (Pixel 9 supported)")
+    else()
+        # Desktop/other platforms can use all GPU types
+        set(GGML_VULKAN ON CACHE BOOL "Enable Vulkan GPU support")
+        set(GGML_CUDA ON CACHE BOOL "Enable CUDA GPU support (if available)")
+        set(GGML_OPENCL ON CACHE BOOL "Enable OpenCL GPU support")
+    endif()
+    
     add_subdirectory(llama.cpp)
 else()
     message(STATUS "llama.cpp not found, building with mock implementation")

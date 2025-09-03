@@ -71,6 +71,22 @@ object LlamaCppJNI {
         }
     }
     
+    fun isVulkanAvailable(): Boolean {
+        return if (isLibraryLoaded) {
+            isVulkanAvailableNative()
+        } else {
+            false // Mock: no GPU acceleration
+        }
+    }
+    
+    fun isGpuAccelerationAvailable(): Boolean {
+        return if (isLibraryLoaded) {
+            isGpuAccelerationAvailableNative()
+        } else {
+            false // Mock: no GPU acceleration
+        }
+    }
+    
     // Mock implementation for testing
     private fun mockGenerate(prompt: String, callback: GenerationCallback): String {
         val response = "Mock response for: $prompt"
@@ -111,6 +127,8 @@ object LlamaCppJNI {
 
     private external fun getMemoryUsageNative(modelPtr: Long): Long
     private external fun getModelSizeMBNative(modelPtr: Long): Float
+    private external fun isVulkanAvailableNative(): Boolean
+    private external fun isGpuAccelerationAvailableNative(): Boolean
 
     interface GenerationCallback {
         fun onToken(token: String)

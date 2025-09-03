@@ -22,7 +22,12 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
-                arguments += listOf("-DANDROID_STL=c++_shared")
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DGGML_VULKAN=OFF", // CPU build with device detection
+                    "-DGGML_OPENCL=OFF",
+                    "-DGGML_CUDA=OFF"
+                )
             }
         }
 

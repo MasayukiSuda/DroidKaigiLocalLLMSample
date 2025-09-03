@@ -11,6 +11,12 @@
     <!-- Gemini Nano permissions -->
     <uses-feature android:name="android.software.ondevice_ai" android:required="false" />
     
+    <!-- GPU acceleration features for llama.cpp -->
+    <uses-feature android:name="android.hardware.vulkan.level" android:version="1" android:required="false" />
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x400003" android:required="false" />
+    <uses-feature android:name="android.software.vulkan.deqp.level" android:version="0x07E60301" android:required="false" />
+    <uses-feature android:name="android.hardware.opengles.aep" android:required="false" />
+    
     <!-- AICore service queries -->
     <queries>
         <package android:name="com.google.android.aicore" />
