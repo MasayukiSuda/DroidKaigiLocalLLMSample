@@ -91,7 +91,7 @@ class LlamaCppRepository @Inject constructor(
         val responseBuilder = StringBuilder()
 
         withContext(Dispatchers.IO) {
-            llamaAndroid.send(fullPrompt, maxLength = 256 * 4)
+            llamaAndroid.send(fullPrompt, maxLength = 1024)
                 .catch { error ->
                     Log.e("llamaAndroid", "send() failed", error)
                     trySend(" Error: $error")
