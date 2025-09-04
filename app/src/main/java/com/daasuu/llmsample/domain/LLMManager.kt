@@ -137,11 +137,34 @@ class LLMManager @Inject constructor(
         // バッテリー監視開始
         val startBatteryLevel = performanceMonitor.getCurrentBatteryLevel()
 
+        // 実行開始前のベースラインメモリを記録
+        val baselineMemory = performanceMonitor.getCurrentMemoryUsage()
+        android.util.Log.d("LLMManager", "実行開始前ベースラインメモリ: ${baselineMemory}MB")
+
+        // シンプルなメモリー監視用リスト
+        val memoryReadings = mutableListOf<Int>()
+        memoryReadings.add(baselineMemory)
+
+        // メモリー監視セッション開始（100ms間隔で監視）
+        val memorySession = PerformanceMonitor.MemoryMonitoringSession.start(performanceMonitor, 100)
+
         try {
             originalFlow.collect { token ->
                 if (firstTokenTime == 0L) {
                     firstTokenTime = System.currentTimeMillis() - startTime
+                    // 最初のトークン生成時のメモリ使用量を明示的に記録
+                    val firstTokenMemory = performanceMonitor.getCurrentMemoryUsage()
+                    memoryReadings.add(firstTokenMemory)
+                    android.util.Log.d("LLMManager", "初回トークン生成時メモリ: ${firstTokenMemory}MB")
                 }
+                
+                // 定期的にメモリーを追加測定（10トークンごと）
+                if (tokenCount % 10 == 0) {
+                    val currentMemory = performanceMonitor.getCurrentMemoryUsage()
+                    memoryReadings.add(currentMemory)
+                    android.util.Log.d("LLMManager", "トークン ${tokenCount} 時メモリ: ${currentMemory}MB")
+                }
+                
                 tokenCount++
                 outputBuilder.append(token)
                 emit(token)
@@ -150,10 +173,33 @@ class LLMManager @Inject constructor(
             val endTime = System.currentTimeMillis()
             val totalLatency = endTime - startTime
 
+            // 実行完了直前のメモリを記録
+            val preStopMemory = performanceMonitor.getCurrentMemoryUsage()
+            memoryReadings.add(preStopMemory)
+            android.util.Log.d("LLMManager", "実行完了直前メモリ: ${preStopMemory}MB, 実行時間: ${totalLatency}ms")
+
             // バッテリー使用量計算
             val endBatteryLevel = performanceMonitor.getCurrentBatteryLevel()
             val batteryDrain =
                 calculateBatteryDrain(startBatteryLevel, endBatteryLevel, totalLatency)
+
+            // メモリー監視セッション停止
+            memorySession.stop()
+
+            // 直接メモリー統計を計算
+            val currentMemoryMB = memoryReadings.lastOrNull() ?: 0
+            val maxMemorySpikeMB = memoryReadings.maxOrNull() ?: 0
+            val averageMemoryUsageMB = if (memoryReadings.isNotEmpty()) {
+                memoryReadings.average().toInt()
+            } else 0
+
+            // デバッグ情報をログ出力
+            android.util.Log.d("LLMManager", "メモリー統計 (直接計算): 測定数=${memoryReadings.size}, " +
+                "現在=${currentMemoryMB}MB, " +
+                "最大=${maxMemorySpikeMB}MB, " +
+                "平均=${averageMemoryUsageMB}MB, " +
+                "実行時間=${totalLatency}ms")
+            android.util.Log.d("LLMManager", "全メモリー測定値: $memoryReadings")
 
             // パフォーマンス記録
             performanceLogger.logPerformance(
@@ -166,7 +212,9 @@ class LLMManager @Inject constructor(
                 firstTokenLatencyMs = firstTokenTime,
                 totalTokens = tokenCount,
                 promptTokens = estimateTokenCount(inputText),
-                memoryUsageMB = getCurrentMemoryUsage(),
+                memoryUsageMB = currentMemoryMB,
+                maxMemorySpikeMB = maxMemorySpikeMB,
+                averageMemoryUsageMB = averageMemoryUsageMB,
                 batteryDrain = batteryDrain,
                 isSuccess = true
             )
@@ -180,6 +228,22 @@ class LLMManager @Inject constructor(
             val batteryDrain =
                 calculateBatteryDrain(startBatteryLevel, endBatteryLevel, totalLatency)
 
+            // メモリー監視セッション停止
+            memorySession.stop()
+
+            // エラー時のメモリー統計を計算
+            val errorMemory = performanceMonitor.getCurrentMemoryUsage()
+            memoryReadings.add(errorMemory)
+            
+            val currentMemoryMB = memoryReadings.lastOrNull() ?: 0
+            val maxMemorySpikeMB = memoryReadings.maxOrNull() ?: 0
+            val averageMemoryUsageMB = if (memoryReadings.isNotEmpty()) {
+                memoryReadings.average().toInt()
+            } else 0
+
+            android.util.Log.d("LLMManager", "エラー時メモリー統計: 測定数=${memoryReadings.size}, " +
+                "現在=${currentMemoryMB}MB, 最大=${maxMemorySpikeMB}MB, 平均=${averageMemoryUsageMB}MB")
+
             // エラーも記録
             performanceLogger.logPerformance(
                 provider = _currentProvider.value,
@@ -191,7 +255,9 @@ class LLMManager @Inject constructor(
                 firstTokenLatencyMs = firstTokenTime,
                 totalTokens = 0,
                 promptTokens = estimateTokenCount(inputText),
-                memoryUsageMB = getCurrentMemoryUsage(),
+                memoryUsageMB = currentMemoryMB,
+                maxMemorySpikeMB = maxMemorySpikeMB,
+                averageMemoryUsageMB = averageMemoryUsageMB,
                 batteryDrain = batteryDrain,
                 isSuccess = false,
                 errorMessage = e.message

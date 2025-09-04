@@ -24,7 +24,9 @@ data class PerformanceRecord(
     val promptTokens: Int, // プロンプトトークン数
     
     // システム情報
-    val memoryUsageMB: Int, // メモリ使用量
+    val memoryUsageMB: Int, // 実行終了時のメモリ使用量
+    val maxMemorySpikeMB: Int, // メモリースパイクの最大値
+    val averageMemoryUsageMB: Int, // 平均メモリ使用量
     val batteryDrain: Float = 0f, // バッテリー消費（推定）
     val deviceInfo: String, // デバイス情報
     

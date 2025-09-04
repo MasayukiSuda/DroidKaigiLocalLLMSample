@@ -32,10 +32,16 @@ class PerformanceLogger @Inject constructor(
         totalTokens: Int,
         promptTokens: Int,
         memoryUsageMB: Int,
+        maxMemorySpikeMB: Int,
+        averageMemoryUsageMB: Int,
         batteryDrain: Float = 0f,
         isSuccess: Boolean = true,
         errorMessage: String? = null
     ) {
+        // 追加デバッグ：受け取った値を確認
+        android.util.Log.d("PerformanceLogger", "記録する値: memoryUsage=${memoryUsageMB}MB, " +
+            "maxSpike=${maxMemorySpikeMB}MB, average=${averageMemoryUsageMB}MB")
+
         val record = PerformanceRecord(
             provider = provider,
             modelName = modelName,
@@ -49,6 +55,8 @@ class PerformanceLogger @Inject constructor(
             totalTokens = totalTokens,
             promptTokens = promptTokens,
             memoryUsageMB = memoryUsageMB,
+            maxMemorySpikeMB = maxMemorySpikeMB,
+            averageMemoryUsageMB = averageMemoryUsageMB,
             batteryDrain = batteryDrain,
             deviceInfo = getDeviceInfo(),
             isSuccess = isSuccess,

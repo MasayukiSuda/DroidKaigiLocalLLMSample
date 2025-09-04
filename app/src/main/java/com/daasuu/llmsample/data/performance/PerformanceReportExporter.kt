@@ -32,7 +32,7 @@ class PerformanceReportExporter @Inject constructor(
 
         FileWriter(file).use { writer ->
             // Header
-            writer.appendLine("ID,実行時刻,プロバイダー,モデル名,タスクタイプ,入力文字数,出力文字数,総レイテンシ(ms),初回トークンレイテンシ(ms),トークン/秒,総トークン数,プロンプトトークン数,メモリ使用量(MB),バッテリー消費(%),デバイス情報,実行成功,エラーメッセージ")
+            writer.appendLine("ID,実行時刻,プロバイダー,モデル名,タスクタイプ,入力文字数,出力文字数,総レイテンシ(ms),初回トークンレイテンシ(ms),トークン/秒,総トークン数,プロンプトトークン数,終了時メモリ使用量(MB),最大メモリスパイク(MB),平均メモリ使用量(MB),バッテリー消費(%),デバイス情報,実行成功,エラーメッセージ")
 
             // Data rows
             records.forEach { record ->
@@ -50,6 +50,8 @@ class PerformanceReportExporter @Inject constructor(
                     record.totalTokens.toString(),
                     record.promptTokens.toString(),
                     record.memoryUsageMB.toString(),
+                    record.maxMemorySpikeMB.toString(),
+                    record.averageMemoryUsageMB.toString(),
                     String.format("%.3f", record.batteryDrain),
                     record.deviceInfo,
                     if (record.isSuccess) "成功" else "失敗",
@@ -161,6 +163,8 @@ class PerformanceReportExporter @Inject constructor(
                 put("averageLatency", successfulRecords.map { it.latencyMs }.average())
                 put("averageTokensPerSecond", successfulRecords.map { it.tokensPerSecond }.average())
                 put("averageMemoryUsage", successfulRecords.map { it.memoryUsageMB }.average())
+                put("averageMaxMemorySpike", successfulRecords.map { it.maxMemorySpikeMB }.average())
+                put("averageAverageMemoryUsage", successfulRecords.map { it.averageMemoryUsageMB }.average())
                 put("averageBatteryDrain", successfulRecords.map { it.batteryDrain }.average())
                 
                 // プロバイダー別統計
@@ -170,6 +174,8 @@ class PerformanceReportExporter @Inject constructor(
                         put("count", records.size)
                         put("averageLatency", records.map { it.latencyMs }.average())
                         put("averageTokensPerSecond", records.map { it.tokensPerSecond }.average())
+                        put("averageMaxMemorySpike", records.map { it.maxMemorySpikeMB }.average())
+                        put("averageAverageMemoryUsage", records.map { it.averageMemoryUsageMB }.average())
                     })
                 }
                 put("providerStats", providerStats)
@@ -181,6 +187,8 @@ class PerformanceReportExporter @Inject constructor(
                         put("count", records.size)
                         put("averageLatency", records.map { it.latencyMs }.average())
                         put("averageTokensPerSecond", records.map { it.tokensPerSecond }.average())
+                        put("averageMaxMemorySpike", records.map { it.maxMemorySpikeMB }.average())
+                        put("averageAverageMemoryUsage", records.map { it.averageMemoryUsageMB }.average())
                     })
                 }
                 put("taskStats", taskStats)
@@ -203,6 +211,8 @@ class PerformanceReportExporter @Inject constructor(
             put("totalTokens", record.totalTokens)
             put("promptTokens", record.promptTokens)
             put("memoryUsageMB", record.memoryUsageMB)
+            put("maxMemorySpikeMB", record.maxMemorySpikeMB)
+            put("averageMemoryUsageMB", record.averageMemoryUsageMB)
             put("batteryDrain", record.batteryDrain)
             put("deviceInfo", record.deviceInfo)
             put("isSuccess", record.isSuccess)
@@ -278,7 +288,9 @@ class PerformanceReportExporter @Inject constructor(
                     <th>タスクタイプ</th>
                     <th>レイテンシ (ms)</th>
                     <th>トークン/秒</th>
-                    <th>メモリ (MB)</th>
+                    <th>終了時メモリ (MB)</th>
+                    <th>最大スパイク (MB)</th>
+                    <th>平均メモリ (MB)</th>
                     <th>バッテリー (%)</th>
                     <th>ステータス</th>
                 </tr>
@@ -308,6 +320,8 @@ class PerformanceReportExporter @Inject constructor(
                         <td>${record.latencyMs}</td>
                         <td>${String.format("%.2f", record.tokensPerSecond)}</td>
                         <td>${record.memoryUsageMB}</td>
+                        <td><strong>${record.maxMemorySpikeMB}</strong></td>
+                        <td>${record.averageMemoryUsageMB}</td>
                         <td>${String.format("%.3f", record.batteryDrain)}</td>
                         <td class="$statusClass">$statusText</td>
                     </tr>

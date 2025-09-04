@@ -591,12 +591,12 @@ fun DetailedRecordCard(record: PerformanceRecord) {
                 
                 Column {
                     Text(
-                        text = "メモリ",
+                        text = "メモリ (現在/最大/平均)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "${record.memoryUsageMB}MB",
+                        text = "${record.memoryUsageMB}/${record.maxMemorySpikeMB}/${record.averageMemoryUsageMB}MB",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
