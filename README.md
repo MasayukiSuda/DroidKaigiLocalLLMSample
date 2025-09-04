@@ -93,7 +93,7 @@ Gemini Nano のオンデバイス高性能とプライバシー保護、llama.cp
 このプロジェクトには以下の第三者ライブラリが含まれています：
 
 - **llama.cpp** - MIT License
-  - Copyright (c) 2023-2024 The ggml authors
+  - Copyright (c) 2023-2025 The ggml authors
   - URL: https://github.com/ggerganov/llama.cpp
 
 ### 使用上の注意
