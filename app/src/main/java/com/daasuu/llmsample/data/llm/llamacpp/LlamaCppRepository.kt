@@ -1,14 +1,15 @@
 package com.daasuu.llmsample.data.llm.llamacpp
 
-import android.content.Context
+import android.llama.cpp.LLamaAndroid
+import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.domain.LLMRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -16,16 +17,14 @@ import javax.inject.Singleton
 
 @Singleton
 class LlamaCppRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val modelManager: ModelManager
+    private val modelManager: ModelManager,
 ) : LLMRepository {
 
-    private var modelPtr: Long = 0L
+    private val llamaAndroid: LLamaAndroid = LLamaAndroid.instance()
+
     private var isInitialized = false
     private var firstTokenTime: Long = 0L
     private var isMock: Boolean = false
-    private val chatHistory: ArrayDeque<Pair<String, String>> = ArrayDeque()
-    private val maxHistoryTurns: Int = 4 // keep last N user-assistant pairs
 
     override suspend fun initialize() {
         if (isInitialized) return
@@ -56,96 +55,26 @@ class LlamaCppRepository @Inject constructor(
                         }
 
                         println("Attempting to initialize LlamaCpp with model: $modelPath (${modelFile.length()} bytes)")
-                        
-                        // Enhanced GPU detection for Pixel 9 and other high-end devices
-                        val isVulkanAvailable = LlamaCppJNI.isVulkanAvailable()
-                        val isGpuAvailable = LlamaCppJNI.isGpuAccelerationAvailable()
-                        
-                        val gpuLayers = when {
-                            isVulkanAvailable -> {
-                                println("✅ Vulkan GPU acceleration detected, enabling GPU layers for faster inference")
-                                32 // Use GPU for most layers on Vulkan-capable devices like Pixel 9
-                            }
-                            isGpuAvailable -> {
-                                println("✅ GPU acceleration available, enabling moderate GPU usage")
-                                24 // Use significant GPU layers for modern devices
-                            }
-                            else -> {
-                                println("⚠️ No GPU acceleration available, using CPU only")
-                                0 // CPU only
-                            }
-                        }
-                        
-                        println("🚀 GPU Layers configured: $gpuLayers (Vulkan: $isVulkanAvailable, GPU: $isGpuAvailable)")
 
-                        modelPtr = LlamaCppJNI.loadModel(
-                            modelPath = modelPath,
-                            contextSize = 2048,
-                            nGpuLayers = gpuLayers
-                        )
-
-                        if (modelPtr != 0L) {
-                            isInitialized = true
-                            isMock = false
-                            println("LlamaCpp model loaded successfully with pointer: $modelPtr")
-                            return@withContext
-                        } else {
-                            println("Failed to load model: $modelPath")
-                        }
+                        llamaAndroid.load(modelPath)
+                        isInitialized = true
+                        isMock = false
+                        return@withContext
                     }
-
                     // If we get here, no models worked
                     println("All downloaded models failed to load, falling back to mock")
-                    fallbackToMock()
                 } else {
                     println("No downloaded models found, using mock implementation")
-                    fallbackToMock()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 println("Exception during LlamaCpp initialization: ${e.message}")
-                fallbackToMock()
             }
-        }
-    }
-
-    private fun fallbackToMock() {
-        try {
-            modelPtr = LlamaCppJNI.loadModel(
-                modelPath = "mock-model",
-                contextSize = 2048,
-                nGpuLayers = 0
-            )
-            isInitialized = modelPtr != 0L
-            isMock = true
-            println("Mock LlamaCpp initialized: $isInitialized")
-        } catch (e: Exception) {
-            e.printStackTrace()
-            isInitialized = false
-            modelPtr = 0L
-            isMock = false
         }
     }
 
     override suspend fun release() {
-        if (modelPtr != 0L) {
-            withContext(Dispatchers.IO) {
-                LlamaCppJNI.unloadModel(modelPtr)
-                modelPtr = 0L
-                isInitialized = false
-            }
-        }
-    }
-
-    /**
-     * 現在のモデルのネイティブメモリ使用量を取得（バイト単位）
-     */
-    fun getModelMemoryUsage(): Long {
-        return if (isInitialized && modelPtr != 0L) {
-            LlamaCppJNI.getMemoryUsage(modelPtr)
-        } else {
-            0L
-        }
+        llamaAndroid.unload()
     }
 
     override suspend fun isAvailable(): Boolean = isInitialized
@@ -162,30 +91,19 @@ class LlamaCppRepository @Inject constructor(
         val responseBuilder = StringBuilder()
 
         withContext(Dispatchers.IO) {
-            LlamaCppJNI.generate(
-                modelPtr = modelPtr,
-                prompt = fullPrompt,
-                maxTokens = 1000,
-                temperature = 0.4f,
-                topP = 0.9f,
-                callback = object : LlamaCppJNI.GenerationCallback {
-                    override fun onToken(token: String) {
-                        if (firstTokenTime == 0L) {
-                            firstTokenTime = System.currentTimeMillis() - startTime
-                        }
-                        responseBuilder.append(token)
-                        trySend(token)
-                    }
-
-                    override fun onComplete() {
-                        // Do not add to history for now to avoid compounding errors
-                    }
-
-                    override fun onError(error: String) {
-                        trySend(" Error: $error")
-                    }
+            llamaAndroid.send(fullPrompt, maxLength = 256 * 4)
+                .catch { error ->
+                    Log.e("llamaAndroid", "send() failed", error)
+                    trySend(" Error: $error")
                 }
-            )
+                .collect {
+                    if (firstTokenTime == 0L) {
+                        firstTokenTime = System.currentTimeMillis() - startTime
+                    }
+
+                    responseBuilder.append(it)
+                    trySend(it)
+                }
         }
     }
 
@@ -200,26 +118,17 @@ class LlamaCppRepository @Inject constructor(
         val startTime = System.currentTimeMillis()
 
         withContext(Dispatchers.IO) {
-            LlamaCppJNI.generate(
-                modelPtr = modelPtr,
-                prompt = prompt,
-                maxTokens = 500,
-                temperature = 0.2f,
-                topP = 0.9f,
-                callback = object : LlamaCppJNI.GenerationCallback {
-                    override fun onToken(token: String) {
-                        if (firstTokenTime == 0L) {
-                            firstTokenTime = System.currentTimeMillis() - startTime
-                        }
-                        trySend(token)
-                    }
-
-                    override fun onComplete() {}
-                    override fun onError(error: String) {
-                        trySend(" Error: $error")
-                    }
+            llamaAndroid.send(message = prompt, maxLength = 512)
+                .catch { error ->
+                    Log.e("llamaAndroid", "send() failed", error)
+                    trySend(" Error: $error")
                 }
-            )
+                .collect {
+                    if (firstTokenTime == 0L) {
+                        firstTokenTime = System.currentTimeMillis() - startTime
+                    }
+                    trySend(it)
+                }
         }
     }
 
@@ -256,26 +165,17 @@ class LlamaCppRepository @Inject constructor(
         }
 
         withContext(Dispatchers.IO) {
-            LlamaCppJNI.generate(
-                modelPtr = modelPtr,
-                prompt = prompt,
-                maxTokens = 500,
-                temperature = 0.2f,
-                topP = 0.95f,
-                callback = object : LlamaCppJNI.GenerationCallback {
-                    override fun onToken(token: String) {
-                        if (firstTokenTime == 0L) {
-                            firstTokenTime = System.currentTimeMillis() - startTime
-                        }
-                        trySend(token)
-                    }
-
-                    override fun onComplete() {}
-                    override fun onError(error: String) {
-                        trySend(" Error: $error")
-                    }
+            llamaAndroid.send(prompt, maxLength = 512)
+                .catch { error ->
+                    Log.e("llamaAndroid", "send() failed", error)
+                    trySend(" Error: $error")
                 }
-            )
+                .collect {
+                    if (firstTokenTime == 0L) {
+                        firstTokenTime = System.currentTimeMillis() - startTime
+                    }
+                    trySend(it)
+                }
         }
     }
 
@@ -304,14 +204,6 @@ class LlamaCppRepository @Inject constructor(
                             "Input: " + cleanMessage + "\n" +
                             "Answer:"
                     )
-        }
-    }
-
-    private fun addToHistory(user: String, assistant: String) {
-        if (user.isBlank() || assistant.isBlank()) return
-        chatHistory.addLast(user.trim() to assistant.trim())
-        while (chatHistory.size > maxHistoryTurns) {
-            chatHistory.removeFirst()
         }
     }
 

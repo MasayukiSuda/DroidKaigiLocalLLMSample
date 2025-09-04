@@ -1,6 +1,5 @@
 package com.daasuu.llmsample.domain
 
-import android.app.ActivityManager
 import android.content.Context
 import com.daasuu.llmsample.data.benchmark.PerformanceMonitor
 import com.daasuu.llmsample.data.model.LLMProvider
@@ -82,7 +81,7 @@ class LLMManager @Inject constructor(
         }
     }
 
-        /**
+    /**
      * 現在のプロバイダーを強制的に再初期化する
      * GPU設定変更など、プロバイダー固有の設定が変更された時に使用
      */
@@ -90,13 +89,13 @@ class LLMManager @Inject constructor(
         providerSwitchMutex.withLock {
             // 現在のプロバイダーをリリース
             getCurrentRepository()?.release()
-            
+
             // ネイティブリソースの解放完了を待つ（短時間）
             kotlinx.coroutines.delay(100)
-            
+
             // 再初期化フラグを設定
             _isInitialized.value = false
-            
+
             // 次回使用時に再初期化される
             // （必要に応じて即座に初期化も可能）
         }
@@ -146,7 +145,8 @@ class LLMManager @Inject constructor(
         memoryReadings.add(baselineMemory)
 
         // メモリー監視セッション開始（100ms間隔で監視）
-        val memorySession = PerformanceMonitor.MemoryMonitoringSession.start(performanceMonitor, 100)
+        val memorySession =
+            PerformanceMonitor.MemoryMonitoringSession.start(performanceMonitor, 100)
 
         try {
             originalFlow.collect { token ->
@@ -155,16 +155,22 @@ class LLMManager @Inject constructor(
                     // 最初のトークン生成時のメモリ使用量を明示的に記録
                     val firstTokenMemory = performanceMonitor.getCurrentMemoryUsage()
                     memoryReadings.add(firstTokenMemory)
-                    android.util.Log.d("LLMManager", "初回トークン生成時メモリ: ${firstTokenMemory}MB")
+                    android.util.Log.d(
+                        "LLMManager",
+                        "初回トークン生成時メモリ: ${firstTokenMemory}MB"
+                    )
                 }
-                
+
                 // 定期的にメモリーを追加測定（10トークンごと）
                 if (tokenCount % 10 == 0) {
                     val currentMemory = performanceMonitor.getCurrentMemoryUsage()
                     memoryReadings.add(currentMemory)
-                    android.util.Log.d("LLMManager", "トークン ${tokenCount} 時メモリ: ${currentMemory}MB")
+                    android.util.Log.d(
+                        "LLMManager",
+                        "トークン ${tokenCount} 時メモリ: ${currentMemory}MB"
+                    )
                 }
-                
+
                 tokenCount++
                 outputBuilder.append(token)
                 emit(token)
@@ -176,7 +182,10 @@ class LLMManager @Inject constructor(
             // 実行完了直前のメモリを記録
             val preStopMemory = performanceMonitor.getCurrentMemoryUsage()
             memoryReadings.add(preStopMemory)
-            android.util.Log.d("LLMManager", "実行完了直前メモリ: ${preStopMemory}MB, 実行時間: ${totalLatency}ms")
+            android.util.Log.d(
+                "LLMManager",
+                "実行完了直前メモリ: ${preStopMemory}MB, 実行時間: ${totalLatency}ms"
+            )
 
             // バッテリー使用量計算
             val endBatteryLevel = performanceMonitor.getCurrentBatteryLevel()
@@ -194,11 +203,13 @@ class LLMManager @Inject constructor(
             } else 0
 
             // デバッグ情報をログ出力
-            android.util.Log.d("LLMManager", "メモリー統計 (直接計算): 測定数=${memoryReadings.size}, " +
-                "現在=${currentMemoryMB}MB, " +
-                "最大=${maxMemorySpikeMB}MB, " +
-                "平均=${averageMemoryUsageMB}MB, " +
-                "実行時間=${totalLatency}ms")
+            android.util.Log.d(
+                "LLMManager", "メモリー統計 (直接計算): 測定数=${memoryReadings.size}, " +
+                        "現在=${currentMemoryMB}MB, " +
+                        "最大=${maxMemorySpikeMB}MB, " +
+                        "平均=${averageMemoryUsageMB}MB, " +
+                        "実行時間=${totalLatency}ms"
+            )
             android.util.Log.d("LLMManager", "全メモリー測定値: $memoryReadings")
 
             // パフォーマンス記録
@@ -234,15 +245,17 @@ class LLMManager @Inject constructor(
             // エラー時のメモリー統計を計算
             val errorMemory = performanceMonitor.getCurrentMemoryUsage()
             memoryReadings.add(errorMemory)
-            
+
             val currentMemoryMB = memoryReadings.lastOrNull() ?: 0
             val maxMemorySpikeMB = memoryReadings.maxOrNull() ?: 0
             val averageMemoryUsageMB = if (memoryReadings.isNotEmpty()) {
                 memoryReadings.average().toInt()
             } else 0
 
-            android.util.Log.d("LLMManager", "エラー時メモリー統計: 測定数=${memoryReadings.size}, " +
-                "現在=${currentMemoryMB}MB, 最大=${maxMemorySpikeMB}MB, 平均=${averageMemoryUsageMB}MB")
+            android.util.Log.d(
+                "LLMManager", "エラー時メモリー統計: 測定数=${memoryReadings.size}, " +
+                        "現在=${currentMemoryMB}MB, 最大=${maxMemorySpikeMB}MB, 平均=${averageMemoryUsageMB}MB"
+            )
 
             // エラーも記録
             performanceLogger.logPerformance(
@@ -309,55 +322,5 @@ class LLMManager @Inject constructor(
 
         val durationMinutes = durationMs / 60000f
         return baseDrainPerMinute * durationMinutes
-    }
-
-    /**
-     * プロセス全体のメモリ使用量を取得（ネイティブライブラリを含む）
-     */
-    private fun getCurrentMemoryUsage(): Int {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val pid = android.os.Process.myPid()
-        val memoryInfo = activityManager.getProcessMemoryInfo(intArrayOf(pid))
-
-        val processMemoryMB = if (memoryInfo.isNotEmpty()) {
-            val info = memoryInfo[0]
-            // totalPss（Proportional Set Size）を使用 - プロセス全体のメモリ使用量（ネイティブ含む）
-            info.totalPss
-        } else {
-            // フォールバック：JVMヒープメモリのみ
-            val runtime = Runtime.getRuntime()
-            val usedMemory = runtime.totalMemory() - runtime.freeMemory()
-            (usedMemory / 1024 / 1024).toInt()
-        }
-
-        // 可能であれば、現在のプロバイダーのネイティブメモリ使用量も含める
-        val nativeMemoryMB = getNativeMemoryUsage()
-
-        // プロセス全体メモリを基本値とし、必要に応じてネイティブメモリを補正
-        return if (nativeMemoryMB > 0) {
-            // PSS値は既にネイティブメモリを含んでいるので、追加の詳細情報として記録
-            maxOf(processMemoryMB, nativeMemoryMB)
-        } else {
-            processMemoryMB
-        }
-    }
-
-    /**
-     * 現在のプロバイダーのネイティブメモリ使用量を取得
-     */
-    private fun getNativeMemoryUsage(): Int {
-        return when (_currentProvider.value) {
-            LLMProvider.LLAMA_CPP -> {
-                try {
-                    val repository =
-                        getCurrentRepository() as? com.daasuu.llmsample.data.llm.llamacpp.LlamaCppRepository
-                    repository?.getModelMemoryUsage()?.let { (it / 1024 / 1024).toInt() } ?: 0
-                } catch (e: Exception) {
-                    0
-                }
-            }
-
-            else -> 0 // 他のプロバイダーはネイティブメモリ使用量を提供しない
-        }
     }
 }
