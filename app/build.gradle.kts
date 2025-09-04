@@ -66,6 +66,8 @@ android {
 
 dependencies {
 
+    implementation(files("libs/llama-release.aar"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
