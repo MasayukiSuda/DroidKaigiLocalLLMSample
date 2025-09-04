@@ -57,6 +57,9 @@ class LlamaCppRepository @Inject constructor(
                         println("Attempting to initialize LlamaCpp with model: $modelPath (${modelFile.length()} bytes)")
 
                         llamaAndroid.load(modelPath)
+                        isInitialized = true
+                        isMock = false
+                        return@withContext
                     }
                     // If we get here, no models worked
                     println("All downloaded models failed to load, falling back to mock")
@@ -88,7 +91,7 @@ class LlamaCppRepository @Inject constructor(
         val responseBuilder = StringBuilder()
 
         withContext(Dispatchers.IO) {
-            llamaAndroid.send(fullPrompt)
+            llamaAndroid.send(fullPrompt, maxLength = 256 * 4)
                 .catch { error ->
                     Log.e("llamaAndroid", "send() failed", error)
                     trySend(" Error: $error")
