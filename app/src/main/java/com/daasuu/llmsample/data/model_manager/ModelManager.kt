@@ -21,6 +21,31 @@ class ModelManager @Inject constructor(
 
     // 利用可能なモデルの定義
     private val availableModels = listOf(
+        // Japanese Language Models
+        ModelInfo(
+            id = "llama-3-8b-cosmopedia-japanese-q4_k_m",
+            name = "LLaMA-3-8B Cosmopedia Japanese Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/mmnga/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-gguf/resolve/main/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-IQ4_XS.gguf?download=true",
+            fileSize = 4800000000L, // ~4.8GB (approx)
+            description = "LLaMA-3-8B fine-tuned on Japanese data with Cosmopedia dataset"
+        ),
+        ModelInfo(
+            id = "elyza-japanese-llama-2-7b-fast-q4_k_m",
+            name = "ELYZA Japanese LLaMA-2-7B Fast Q4_K_M",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/mmnga/ELYZA-japanese-Llama-2-7b-fast-instruct-gguf/resolve/main/ELYZA-japanese-Llama-2-7b-fast-instruct-q4_K_M.gguf?download=true",
+            fileSize = 4200000000L, // ~4.2GB (approx)
+            description = "ELYZA's Japanese-tuned LLaMA-2-7B model optimized for fast inference"
+        ),
+        ModelInfo(
+            id = "suzume-llama-3-8B-japanese-GGUF",
+            name = "Suzume-llama-3-8B-japanese-Q4_K_M.gguf",
+            provider = LLMProvider.LLAMA_CPP,
+            downloadUrl = "https://huggingface.co/tensorblock/suzume-llama-3-8B-japanese-GGUF/resolve/main/suzume-llama-3-8B-japanese-Q4_K_M.gguf",
+            fileSize = 4900000000L, // ~4.2GB (approx)
+            description = "Japanese LLaMA-3-8B model fine-tuned"
+        ),
         ModelInfo(
             id = "llama-3.2-3b-instruct-q4_k_m",
             name = "Llama 3.2 3B Instruct Q4_K_M",
@@ -231,6 +256,24 @@ class ModelManager @Inject constructor(
                         ignoreCase = true
                     ) -> "gemma3-2b-task" // Default to 2B
                     fileName.contains("mobilevlm", ignoreCase = true) -> "mobilevlm-q4"
+                    // Japanese Models
+                    fileName.contains(
+                        "cosmopedia-japanese",
+                        ignoreCase = true
+                    ) -> "llama-3-8b-cosmopedia-japanese-q4_k_m"
+
+                    fileName.contains(
+                        "elyza-japanese",
+                        ignoreCase = true
+                    ) -> "elyza-japanese-llama-2-7b-fast-q4_k_m"
+
+                    fileName.contains(
+                        "suzume",
+                        ignoreCase = true
+                    ) && fileName.contains(
+                        "japanese",
+                        ignoreCase = true
+                    ) -> "suzume-llama-3-8b-japanese-q4_k_m" // For future use when available
                     else -> continue
                 }
 
