@@ -190,18 +190,6 @@ fun PerformanceDashboardScreen(
     if (showExportDialog) {
         ModernExportDialog(
             onDismiss = { showExportDialog = false },
-            onExportCsv = {
-                scope.launch {
-                    isExporting = true
-                    try {
-                        val file = reportExporter.exportToCsv(performanceRecords)
-                        reportExporter.shareReport(file)
-                    } finally {
-                        isExporting = false
-                        showExportDialog = false
-                    }
-                }
-            },
             onExportJson = {
                 scope.launch {
                     isExporting = true
@@ -214,18 +202,6 @@ fun PerformanceDashboardScreen(
                     }
                 }
             },
-            onExportHtml = {
-                scope.launch {
-                    isExporting = true
-                    try {
-                        val file = reportExporter.exportToHtml(performanceRecords)
-                        reportExporter.shareReport(file)
-                    } finally {
-                        isExporting = false
-                        showExportDialog = false
-                    }
-                }
-            }
         )
     }
 
@@ -847,9 +823,7 @@ fun EmptyStateCard() {
 @Composable
 fun ModernExportDialog(
     onDismiss: () -> Unit,
-    onExportCsv: () -> Unit,
-    onExportJson: () -> Unit,
-    onExportHtml: () -> Unit
+    onExportJson: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -864,34 +838,28 @@ fun ModernExportDialog(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("エクスポート形式を選択")
+                Text("JSONエクスポート")
             }
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ExportOptionButton(
-                    title = "CSV形式",
-                    description = "Excel等で開ける表形式",
-                    icon = Icons.Default.TableChart,
-                    onClick = onExportCsv
+            Column {
+                Text(
+                    text = "パフォーマンスデータをJSON形式でエクスポートします。",
+                    style = MaterialTheme.typography.bodyMedium
                 )
-                ExportOptionButton(
-                    title = "JSON形式",
-                    description = "プログラムで読み込める形式",
-                    icon = Icons.Default.Code,
-                    onClick = onExportJson
-                )
-                ExportOptionButton(
-                    title = "HTML形式",
-                    description = "ブラウザで見れる美しいレポート",
-                    icon = Icons.Default.Web,
-                    onClick = onExportHtml
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "プログラムで読み込みやすい形式で保存されます。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
         },
-        confirmButton = {},
+        confirmButton = {
+            TextButton(onClick = onExportJson) {
+                Text("エクスポート")
+            }
+        },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("キャンセル")
@@ -900,49 +868,6 @@ fun ModernExportDialog(
     )
 }
 
-@Composable
-fun ExportOptionButton(
-    title: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth(),
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun FilterDialog(

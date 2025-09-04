@@ -135,10 +135,6 @@ class PerformanceMonitor @Inject constructor(
                     delay(50) // 最初の250msは50ms間隔
                     val currentMemory = performanceMonitor.getCurrentMemoryUsage()
                     memoryReadings.add(currentMemory)
-                    android.util.Log.d(
-                        "MemorySession",
-                        "早期メモリー測定 #${it + 1}: ${currentMemory}MB"
-                    )
                 }
 
                 // 通常間隔での継続監視
@@ -146,7 +142,6 @@ class PerformanceMonitor @Inject constructor(
                     delay(intervalMs)
                     val currentMemory = performanceMonitor.getCurrentMemoryUsage()
                     memoryReadings.add(currentMemory)
-                    android.util.Log.d("MemorySession", "通常メモリー測定: ${currentMemory}MB")
                 }
             }
         }
