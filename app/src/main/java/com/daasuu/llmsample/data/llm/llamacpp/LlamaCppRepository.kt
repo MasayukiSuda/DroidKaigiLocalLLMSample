@@ -18,9 +18,8 @@ import javax.inject.Singleton
 @Singleton
 class LlamaCppRepository @Inject constructor(
     private val modelManager: ModelManager,
+    private val llamaAndroid: LLamaAndroid,
 ) : LLMRepository {
-
-    private val llamaAndroid: LLamaAndroid = LLamaAndroid.instance()
 
     private var isInitialized = false
     private var firstTokenTime: Long = 0L

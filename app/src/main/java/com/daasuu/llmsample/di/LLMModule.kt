@@ -1,5 +1,6 @@
 package com.daasuu.llmsample.di
 
+import android.llama.cpp.LLamaAndroid
 import com.daasuu.llmsample.data.llm.gemini.GeminiNanoRepository
 import com.daasuu.llmsample.data.llm.llamacpp.LlamaCppRepository
 import com.daasuu.llmsample.data.llm.task.TaskRepository
@@ -27,6 +28,12 @@ annotation class GeminiNanoRepo
 @Module
 @InstallIn(SingletonComponent::class)
 object LLMModule {
+    
+    @Provides
+    @Singleton
+    fun provideLLamaAndroid(): LLamaAndroid {
+        return LLamaAndroid.instance()
+    }
     
     @Provides
     @Singleton
