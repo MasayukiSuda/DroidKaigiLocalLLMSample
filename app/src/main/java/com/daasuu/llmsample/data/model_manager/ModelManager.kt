@@ -23,7 +23,7 @@ class ModelManager @Inject constructor(
     private val availableModels = listOf(
         // Japanese Language Models
         ModelInfo(
-            id = "llama-3-8b-cosmopedia-japanese-q4_k_m",
+            id = MODEL_ID_LLAMA_3_8B_COSMOPEDIA_JAPANESE,
             name = "LLaMA-3-8B Cosmopedia Japanese Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/mmnga/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-gguf/resolve/main/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-IQ4_XS.gguf?download=true",
@@ -31,7 +31,7 @@ class ModelManager @Inject constructor(
             description = "LLaMA-3-8B fine-tuned on Japanese data with Cosmopedia dataset"
         ),
         ModelInfo(
-            id = "elyza-japanese-llama-2-7b-fast-q4_k_m",
+            id = MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B,
             name = "ELYZA Japanese LLaMA-2-7B Fast Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/mmnga/ELYZA-japanese-Llama-2-7b-fast-instruct-gguf/resolve/main/ELYZA-japanese-Llama-2-7b-fast-instruct-q4_K_M.gguf?download=true",
@@ -39,7 +39,7 @@ class ModelManager @Inject constructor(
             description = "ELYZA's Japanese-tuned LLaMA-2-7B model optimized for fast inference"
         ),
         ModelInfo(
-            id = "suzume-llama-3-8B-japanese-GGUF",
+            id = MODEL_ID_SUZUME_LLAMA_3_8B_JAPANESE,
             name = "Suzume-llama-3-8B-japanese-Q4_K_M.gguf",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/tensorblock/suzume-llama-3-8B-japanese-GGUF/resolve/main/suzume-llama-3-8B-japanese-Q4_K_M.gguf",
@@ -47,7 +47,7 @@ class ModelManager @Inject constructor(
             description = "Japanese LLaMA-3-8B model fine-tuned"
         ),
         ModelInfo(
-            id = "llama-3.2-3b-instruct-q4_k_m",
+            id = MODEL_ID_LLAMA_3_2_3B_INSTRUCT,
             name = "Llama 3.2 3B Instruct Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
@@ -55,7 +55,7 @@ class ModelManager @Inject constructor(
             description = "Meta Llama 3.2 3B Instruct quantized to 4-bit (Q4_K_M)"
         ),
         ModelInfo(
-            id = "llama-3.2-1b-instruct-q4_k_m",
+            id = MODEL_ID_LLAMA_3_2_1B_INSTRUCT,
             name = "Llama 3.2 1B Instruct Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
@@ -63,7 +63,7 @@ class ModelManager @Inject constructor(
             description = "Meta Llama 3.2 1B Instruct - smaller version of Llama 3.2"
         ),
         ModelInfo(
-            id = "llama-3.1-8b-instruct-q4_k_m",
+            id = MODEL_ID_LLAMA_3_1_8B_INSTRUCT,
             name = "Llama 3.1 8B Instruct Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
@@ -71,7 +71,7 @@ class ModelManager @Inject constructor(
             description = "Meta Llama 3.1 8B Instruct - larger, more capable model"
         ),
         ModelInfo(
-            id = "qwen2.5-3b-instruct-q4_k_m",
+            id = MODEL_ID_QWEN2_5_3B_INSTRUCT,
             name = "Qwen2.5 3B Instruct Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
@@ -79,7 +79,7 @@ class ModelManager @Inject constructor(
             description = "Alibaba Qwen2.5 3B Instruct - excellent multilingual support"
         ),
         ModelInfo(
-            id = "tinyllama-1.1b-q4",
+            id = MODEL_ID_TINYLLAMA_1_1B,
             name = "TinyLlama 1.1B Q4",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf",
@@ -87,7 +87,7 @@ class ModelManager @Inject constructor(
             description = "Lightweight TinyLlama model for quick testing"
         ),
         ModelInfo(
-            id = "phi-2-q4",
+            id = MODEL_ID_PHI_2,
             name = "Phi-2 Q4",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
@@ -95,7 +95,7 @@ class ModelManager @Inject constructor(
             description = "Microsoft Phi-2 model quantized to 4-bit"
         ),
         ModelInfo(
-            id = "phi-3.5-mini-instruct-q4_k_m",
+            id = MODEL_ID_PHI_3_5_MINI_INSTRUCT,
             name = "Phi-3.5 Mini Instruct Q4_K_M",
             provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
@@ -104,7 +104,7 @@ class ModelManager @Inject constructor(
         ),
         // Gemma3 Models (LiteRT/Task format)
         ModelInfo(
-            id = "gemma3-2b-task",
+            id = MODEL_ID_GEMMA3_2B_TASK,
             name = "Gemma3 2B (.task)",
             provider = LLMProvider.LITE_RT,
             downloadUrl = "", // Manual placement required
@@ -112,7 +112,7 @@ class ModelManager @Inject constructor(
             description = "Google Gemma3 2B model in TensorFlow Lite Task format - place manually in assets"
         ),
         ModelInfo(
-            id = "gemma3-9b-task",
+            id = MODEL_ID_GEMMA3_9B_TASK,
             name = "Gemma3 9B (.task)",
             provider = LLMProvider.LITE_RT,
             downloadUrl = "", // Manual placement required
@@ -120,7 +120,7 @@ class ModelManager @Inject constructor(
             description = "Google Gemma3 9B model in TensorFlow Lite Task format - place manually in assets"
         ),
         ModelInfo(
-            id = "gemma3-27b-task",
+            id = MODEL_ID_GEMMA3_27B_TASK,
             name = "Gemma3 27B (.task)",
             provider = LLMProvider.LITE_RT,
             downloadUrl = "", // Manual placement required
@@ -223,49 +223,49 @@ class ModelManager @Inject constructor(
                     fileName.contains(
                         "llama-3.2-3b",
                         ignoreCase = true
-                    ) -> "llama-3.2-3b-instruct-q4_k_m"
+                    ) -> MODEL_ID_LLAMA_3_2_3B_INSTRUCT
 
                     fileName.contains(
                         "llama-3.2-1b",
                         ignoreCase = true
-                    ) -> "llama-3.2-1b-instruct-q4_k_m"
+                    ) -> MODEL_ID_LLAMA_3_2_1B_INSTRUCT
 
                     fileName.contains(
                         "llama-3.1-8b",
                         ignoreCase = true
-                    ) -> "llama-3.1-8b-instruct-q4_k_m"
+                    ) -> MODEL_ID_LLAMA_3_1_8B_INSTRUCT
 
                     fileName.contains(
                         "qwen2.5-3b",
                         ignoreCase = true
-                    ) -> "qwen2.5-3b-instruct-q4_k_m"
+                    ) -> MODEL_ID_QWEN2_5_3B_INSTRUCT
 
-                    fileName.contains("tinyllama", ignoreCase = true) -> "tinyllama-1.1b-q4"
-                    fileName.contains("phi-2", ignoreCase = true) -> "phi-2-q4"
+                    fileName.contains("tinyllama", ignoreCase = true) -> MODEL_ID_TINYLLAMA_1_1B
+                    fileName.contains("phi-2", ignoreCase = true) -> MODEL_ID_PHI_2
                     fileName.contains(
                         "phi-3.5",
                         ignoreCase = true
-                    ) -> "phi-3.5-mini-instruct-q4_k_m"
+                    ) -> MODEL_ID_PHI_3_5_MINI_INSTRUCT
 
 
-                    fileName.contains("gemma3-2b", ignoreCase = true) -> "gemma3-2b-task"
-                    fileName.contains("gemma3-9b", ignoreCase = true) -> "gemma3-9b-task"
-                    fileName.contains("gemma3-27b", ignoreCase = true) -> "gemma3-27b-task"
+                    fileName.contains("gemma3-2b", ignoreCase = true) -> MODEL_ID_GEMMA3_2B_TASK
+                    fileName.contains("gemma3-9b", ignoreCase = true) -> MODEL_ID_GEMMA3_9B_TASK
+                    fileName.contains("gemma3-27b", ignoreCase = true) -> MODEL_ID_GEMMA3_27B_TASK
                     fileName.contains(
                         "gemma3",
                         ignoreCase = true
-                    ) -> "gemma3-2b-task" // Default to 2B
+                    ) -> MODEL_ID_GEMMA3_2B_TASK // Default to 2B
                     fileName.contains("mobilevlm", ignoreCase = true) -> "mobilevlm-q4"
                     // Japanese Models
                     fileName.contains(
                         "cosmopedia-japanese",
                         ignoreCase = true
-                    ) -> "llama-3-8b-cosmopedia-japanese-q4_k_m"
+                    ) -> MODEL_ID_LLAMA_3_8B_COSMOPEDIA_JAPANESE
 
                     fileName.contains(
                         "elyza-japanese",
                         ignoreCase = true
-                    ) -> "elyza-japanese-llama-2-7b-fast-q4_k_m"
+                    ) -> MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B
 
                     fileName.contains(
                         "suzume",
@@ -273,7 +273,7 @@ class ModelManager @Inject constructor(
                     ) && fileName.contains(
                         "japanese",
                         ignoreCase = true
-                    ) -> "suzume-llama-3-8b-japanese-q4_k_m" // For future use when available
+                    ) -> MODEL_ID_SUZUME_LLAMA_3_8B_JAPANESE // For future use when available
                     else -> continue
                 }
 
@@ -296,5 +296,22 @@ class ModelManager @Inject constructor(
         } catch (e: Exception) {
             // Assetsにモデルがない場合は無視
         }
+    }
+
+    companion object {
+        // Model ID constants
+        const val MODEL_ID_LLAMA_3_8B_COSMOPEDIA_JAPANESE = "llama-3-8b-cosmopedia-japanese-q4_k_m"
+        const val MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B = "elyza-japanese-llama-2-7b-fast-q4_k_m"
+        const val MODEL_ID_SUZUME_LLAMA_3_8B_JAPANESE = "suzume-llama-3-8B-japanese-GGUF"
+        const val MODEL_ID_LLAMA_3_2_3B_INSTRUCT = "llama-3.2-3b-instruct-q4_k_m"
+        const val MODEL_ID_LLAMA_3_2_1B_INSTRUCT = "llama-3.2-1b-instruct-q4_k_m"
+        const val MODEL_ID_LLAMA_3_1_8B_INSTRUCT = "llama-3.1-8b-instruct-q4_k_m"
+        const val MODEL_ID_QWEN2_5_3B_INSTRUCT = "qwen2.5-3b-instruct-q4_k_m"
+        const val MODEL_ID_TINYLLAMA_1_1B = "tinyllama-1.1b-q4"
+        const val MODEL_ID_PHI_2 = "phi-2-q4"
+        const val MODEL_ID_PHI_3_5_MINI_INSTRUCT = "phi-3.5-mini-instruct-q4_k_m"
+        const val MODEL_ID_GEMMA3_2B_TASK = "gemma3-2b-task"
+        const val MODEL_ID_GEMMA3_9B_TASK = "gemma3-9b-task"
+        const val MODEL_ID_GEMMA3_27B_TASK = "gemma3-27b-task"
     }
 }

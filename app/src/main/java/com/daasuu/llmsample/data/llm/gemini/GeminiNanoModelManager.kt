@@ -21,7 +21,7 @@ class GeminiNanoModelManager @Inject constructor(
     @Volatile
     private var cachedModel: GenerativeModel? = null
     private val modelLock = Mutex()
-    
+
     /**
      * モデルを取得する（必要に応じて作成）
      * スレッドセーフに実装されており、複数のコルーチンから同時に呼び出しても安全
@@ -30,7 +30,7 @@ class GeminiNanoModelManager @Inject constructor(
         modelLock.withLock {
             // キャッシュされたモデルがあれば返す
             cachedModel?.let { return it }
-            
+
             // 互換性チェック
             val compatibility = compatibilityChecker.isDeviceSupported()
             if (compatibility !is DeviceCompatibility.Supported) {
@@ -38,7 +38,7 @@ class GeminiNanoModelManager @Inject constructor(
                 println("Gemini Nano model creation failed: $message")
                 return null
             }
-            
+
             // モデル作成
             cachedModel = try {
                 println("Creating new Gemini Nano model...")
@@ -57,11 +57,11 @@ class GeminiNanoModelManager @Inject constructor(
                 e.printStackTrace()
                 null
             }
-            
+
             return cachedModel
         }
     }
-    
+
     /**
      * モデルをリリースする
      * メモリリークを防ぐため、アプリ終了時やプロバイダー切り替え時に呼び出す
@@ -79,20 +79,11 @@ class GeminiNanoModelManager @Inject constructor(
             cachedModel = null
         }
     }
-    
+
     /**
      * モデルが利用可能かどうかを確認
      */
     suspend fun isModelAvailable(): Boolean {
         return getOrCreateModel() != null
-    }
-    
-    /**
-     * デバイス互換性のみをチェック（モデル作成はしない）
-     * 軽量な互換性確認用
-     */
-    suspend fun isDeviceSupported(): Boolean {
-        val compatibility = compatibilityChecker.isDeviceSupported()
-        return compatibility is DeviceCompatibility.Supported
     }
 }
