@@ -39,7 +39,6 @@ class ModelDownloadViewModel @Inject constructor(
             modelManager.downloadModel(
                 modelId = modelId,
                 onProgress = { progress ->
-                    android.util.Log.v("ModelDownloadVM", "Download progress for $modelId: ${progress.progress} (${progress.downloadedBytes}/${progress.totalBytes})")
                     _downloadingModels.value =
                         _downloadingModels.value + (modelId to progress.progress)
                 }
@@ -50,15 +49,26 @@ class ModelDownloadViewModel @Inject constructor(
                     loadModels()
                 },
                 onFailure = { error ->
-                    android.util.Log.e("ModelDownloadVM", "Download failed for model: $modelId", error)
+                    android.util.Log.e(
+                        "ModelDownloadVM",
+                        "Download failed for model: $modelId",
+                        error
+                    )
                     _downloadingModels.value = _downloadingModels.value - modelId
                     when (error) {
                         is IllegalStateException -> {
                             // 手動配置が必要なモデルの場合
-                            android.util.Log.w("ModelDownloadVM", "Manual placement required for model: $modelId")
+                            android.util.Log.w(
+                                "ModelDownloadVM",
+                                "Manual placement required for model: $modelId"
+                            )
                         }
+
                         else -> {
-                            android.util.Log.e("ModelDownloadVM", "Unexpected error during download: ${error.message}")
+                            android.util.Log.e(
+                                "ModelDownloadVM",
+                                "Unexpected error during download: ${error.message}"
+                            )
                         }
                     }
                 }
