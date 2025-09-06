@@ -103,8 +103,15 @@ private fun ModelItem(
                                 progress = downloadProgress,
                                 modifier = Modifier.size(32.dp)
                             )
+                            // Content-Lengthが取得できない場合の表示改善
+                            val displayText =
+                                if (downloadProgress > 0.009f && downloadProgress < 0.02f) {
+                                    "ダウンロード中..."
+                                } else {
+                                    "${(downloadProgress * 100).toInt()}%"
+                                }
                             Text(
-                                text = "${(downloadProgress * 100).toInt()}%",
+                                text = displayText,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }

@@ -166,6 +166,11 @@ class ModelManager @Inject constructor(
         val model = availableModels.find { it.id == modelId }
             ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
 
+        // 空のダウンロードURLをチェック
+        if (model.downloadUrl.isEmpty()) {
+            return@withContext Result.failure(IllegalStateException("Model '${model.name}' requires manual placement. Please place the model file manually in the assets folder."))
+        }
+
         val localFile = getModelFile(model)
 
         // すでに存在する場合はスキップ
@@ -173,10 +178,16 @@ class ModelManager @Inject constructor(
             return@withContext Result.success(Unit)
         }
 
+        android.util.Log.d(
+            "ModelManager",
+            "Starting download for model: ${model.name} (${model.id})"
+        )
+
         modelDownloader.downloadModel(
             url = model.downloadUrl,
             destinationFile = localFile,
-            onProgress = onProgress
+            onProgress = onProgress,
+            model = model
         ).map { Unit }
     }
 

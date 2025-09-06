@@ -35,20 +35,32 @@ class ModelDownloadViewModel @Inject constructor(
 
     fun downloadModel(modelId: String) {
         viewModelScope.launch {
+            android.util.Log.d("ModelDownloadVM", "Starting download for model: $modelId")
             modelManager.downloadModel(
                 modelId = modelId,
                 onProgress = { progress ->
+                    android.util.Log.v("ModelDownloadVM", "Download progress for $modelId: ${progress.progress} (${progress.downloadedBytes}/${progress.totalBytes})")
                     _downloadingModels.value =
                         _downloadingModels.value + (modelId to progress.progress)
                 }
             ).fold(
                 onSuccess = {
+                    android.util.Log.d("ModelDownloadVM", "Download completed for model: $modelId")
                     _downloadingModels.value = _downloadingModels.value - modelId
                     loadModels()
                 },
                 onFailure = { error ->
+                    android.util.Log.e("ModelDownloadVM", "Download failed for model: $modelId", error)
                     _downloadingModels.value = _downloadingModels.value - modelId
-                    // エラー処理
+                    when (error) {
+                        is IllegalStateException -> {
+                            // 手動配置が必要なモデルの場合
+                            android.util.Log.w("ModelDownloadVM", "Manual placement required for model: $modelId")
+                        }
+                        else -> {
+                            android.util.Log.e("ModelDownloadVM", "Unexpected error during download: ${error.message}")
+                        }
+                    }
                 }
             )
         }
@@ -56,12 +68,14 @@ class ModelDownloadViewModel @Inject constructor(
 
     fun deleteModel(modelId: String) {
         viewModelScope.launch {
+            android.util.Log.d("ModelDownloadVM", "Deleting model: $modelId")
             modelManager.deleteModel(modelId).fold(
                 onSuccess = {
+                    android.util.Log.d("ModelDownloadVM", "Model deleted successfully: $modelId")
                     loadModels()
                 },
                 onFailure = { error ->
-                    // エラー処理
+                    android.util.Log.e("ModelDownloadVM", "Failed to delete model: $modelId", error)
                 }
             )
         }
