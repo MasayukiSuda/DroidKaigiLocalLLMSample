@@ -25,10 +25,9 @@ class TaskRepository @Inject constructor(
 
     private val TAG = "TaskGenAI"
     private var isInitialized = false
-    private var taskModelPath: String? = null
 
     // MediaPipe GenAI (TextGenerator) via reflection
-    private var mpTextGenerator: LlmInference? = null
+    private var llmInference: LlmInference? = null
 
     override suspend fun initialize() {
         if (isInitialized) {
@@ -40,10 +39,10 @@ class TaskRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 // 前回のリソースが残っていれば確実にクリア
-                mpTextGenerator?.let {
+                llmInference?.let {
                     Log.w(TAG, "Previous generator instance found, clearing...")
-                    mpTextGenerator?.close()
-                    mpTextGenerator = null
+                    llmInference?.close()
+                    llmInference = null
                 }
 
                 val destDir = File(context.filesDir, "models/lite_rt/gemma3")
@@ -57,7 +56,7 @@ class TaskRepository @Inject constructor(
                 val allFiles = destDir.listFiles()
 
                 val taskFile = allFiles?.firstOrNull { it.extension.equals("task", true) }
-                taskModelPath = taskFile?.absolutePath
+                val taskModelPath = taskFile?.absolutePath
                 Log.d(TAG, "taskModelPath=$taskModelPath")
 
                 if (taskFile == null) {
@@ -73,8 +72,8 @@ class TaskRepository @Inject constructor(
                     var initSuccess = false
                     try {
                         Log.d(TAG, "Attempting GPU initialization...")
-                        tryInitMediaPipeGenerator()
-                        if (mpTextGenerator != null) {
+                        tryInitMediaPipeGenerator(taskModelPath)
+                        if (llmInference != null) {
                             initSuccess = true
                             Log.d(TAG, "GPU initialization successful")
                         }
@@ -83,7 +82,7 @@ class TaskRepository @Inject constructor(
                             TAG,
                             "GPU initialization failed, falling back to CPU: ${e.message}"
                         )
-                        mpTextGenerator = null
+                        llmInference = null
                     }
 
                     isInitialized = initSuccess
@@ -94,7 +93,7 @@ class TaskRepository @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "TaskRepository initialization failed", e)
-                mpTextGenerator = null
+                llmInference = null
                 isInitialized = false
             }
         }
@@ -105,7 +104,7 @@ class TaskRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 // MediaPipe GenAI インスタンスを明示的にクリア
-                mpTextGenerator?.let { generator ->
+                llmInference?.let { generator ->
                     try {
                         generator.close()
                         Log.d(TAG, "MediaPipe generator closed successfully")
@@ -114,13 +113,13 @@ class TaskRepository @Inject constructor(
                     }
                 }
 
-                mpTextGenerator = null
+                llmInference = null
                 isInitialized = false
                 Log.d(TAG, "TaskRepository released successfully")
             } catch (e: Exception) {
                 Log.e(TAG, "Error during TaskRepository release", e)
                 // エラーがあってもisInitializedをfalseにしてリセット
-                mpTextGenerator = null
+                llmInference = null
                 isInitialized = false
             }
         }
@@ -143,7 +142,7 @@ class TaskRepository @Inject constructor(
 
         Log.d(
             TAG,
-            "generateChatResponse: isInitialized=$isInitialized, mpTextGenerator=$mpTextGenerator"
+            "generateChatResponse: isInitialized=$isInitialized, mpTextGenerator=$llmInference"
         )
 
         var hasEmitted = false
@@ -256,26 +255,27 @@ class TaskRepository @Inject constructor(
         }
     }
 
-    private fun tryInitMediaPipeGenerator() {
-        val modelPath = taskModelPath ?: return
+    private fun tryInitMediaPipeGenerator(modelPath: String?) {
+        modelPath ?: return
 
         Log.d(TAG, "Model path: $modelPath")
 
         try {
             val baseOptionsBuilder = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelPath)
-            mpTextGenerator = LlmInference.createFromOptions(context, baseOptionsBuilder.build())
+                .build()
+            llmInference = LlmInference.createFromOptions(context, baseOptionsBuilder)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize LlmInference: ${e.message}", e)
-            mpTextGenerator = null
+            llmInference = null
         }
     }
 
     private fun runMediaPipeGenerate(prompt: String): Flow<String> = channelFlow {
         Log.d(TAG, "runMediaPipeGenerate called with prompt length: ${prompt.length}")
 
-        val gen = mpTextGenerator
-        if (gen == null) {
+        val llmInference = llmInference
+        if (llmInference == null) {
             Log.w(TAG, "MediaPipe generator not available - mpTextGenerator is null")
             return@channelFlow
         }
@@ -294,10 +294,8 @@ class TaskRepository @Inject constructor(
                     close() // Close the channel when generation is complete
                 }
             }
-
-            Log.d(TAG, "Calling generateResponseAsync...")
-            // Use generateResponseAsync directly
-            gen.generateResponseAsync(prompt, callback)
+            
+            llmInference.generateResponseAsync(prompt, callback)
             Log.d(TAG, "generateResponseAsync called successfully")
 
             // Wait for the callback to complete or channel to be closed
