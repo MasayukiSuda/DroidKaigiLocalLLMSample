@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.prompts.CommonPrompts
-import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.ProgressListener
@@ -14,7 +13,6 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -23,7 +21,6 @@ import javax.inject.Singleton
 @Singleton
 class TaskRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository
 ) : LLMRepository {
 
     private val TAG = "TaskGenAI"
@@ -73,52 +70,20 @@ class TaskRepository @Inject constructor(
                 }
 
                 if (taskModelPath != null) {
-                    val isGpuEnabled = settingsRepository.isGpuEnabled.first()
-
-                    // エミュレータ検知
-                    val isEmulator = isRunningOnEmulator()
-                    if (isEmulator) {
-                        Log.w(TAG, "Running on emulator, disabling GPU acceleration")
-                    }
-
-                    val actualGpuEnabled = isGpuEnabled && !isEmulator
-                    Log.d(
-                        TAG,
-                        "Starting MediaPipe initialization with GPU=${actualGpuEnabled} (requested: ${isGpuEnabled}, emulator: ${isEmulator})"
-                    )
-
-                    // 段階的初期化: GPU有効 → GPU無効 → 初期化スキップ
                     var initSuccess = false
-
-                    if (actualGpuEnabled) {
-                        try {
-                            Log.d(TAG, "Attempting GPU initialization...")
-                            tryInitMediaPipeGenerator(true)
-                            if (mpTextGenerator != null) {
-                                initSuccess = true
-                                Log.d(TAG, "GPU initialization successful")
-                            }
-                        } catch (e: Exception) {
-                            Log.w(
-                                TAG,
-                                "GPU initialization failed, falling back to CPU: ${e.message}"
-                            )
-                            mpTextGenerator = null
+                    try {
+                        Log.d(TAG, "Attempting GPU initialization...")
+                        tryInitMediaPipeGenerator()
+                        if (mpTextGenerator != null) {
+                            initSuccess = true
+                            Log.d(TAG, "GPU initialization successful")
                         }
-                    }
-
-                    if (!initSuccess) {
-                        try {
-                            Log.d(TAG, "Attempting CPU initialization...")
-                            tryInitMediaPipeGenerator(false)
-                            if (mpTextGenerator != null) {
-                                initSuccess = true
-                                Log.d(TAG, "CPU initialization successful")
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "CPU initialization also failed: ${e.message}")
-                            mpTextGenerator = null
-                        }
+                    } catch (e: Exception) {
+                        Log.w(
+                            TAG,
+                            "GPU initialization failed, falling back to CPU: ${e.message}"
+                        )
+                        mpTextGenerator = null
                     }
 
                     isInitialized = initSuccess
@@ -161,17 +126,6 @@ class TaskRepository @Inject constructor(
         }
     }
 
-    private fun isRunningOnEmulator(): Boolean {
-        return android.os.Build.FINGERPRINT.startsWith("generic") ||
-                android.os.Build.FINGERPRINT.startsWith("unknown") ||
-                android.os.Build.MODEL.contains("google_sdk") ||
-                android.os.Build.MODEL.contains("Emulator") ||
-                android.os.Build.MODEL.contains("Android SDK") ||
-                android.os.Build.MANUFACTURER.contains("Genymotion") ||
-                android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic") ||
-                "google_sdk" == android.os.Build.PRODUCT
-    }
-
     override suspend fun isAvailable(): Boolean = isInitialized
 
     override suspend fun generateChatResponse(prompt: String): Flow<String> = channelFlow {
@@ -196,7 +150,6 @@ class TaskRepository @Inject constructor(
         try {
             Log.d(TAG, "Starting runMediaPipeGenerate flow collection...")
             runMediaPipeGenerate(finalPrompt).collect { token ->
-                Log.d(TAG, "Received token from runMediaPipeGenerate: '$token'")
                 send(token)
                 hasEmitted = true
                 delay(12)
@@ -303,24 +256,15 @@ class TaskRepository @Inject constructor(
         }
     }
 
-    private fun tryInitMediaPipeGenerator(enableGpu: Boolean = false) {
+    private fun tryInitMediaPipeGenerator() {
         val modelPath = taskModelPath ?: return
 
-        Log.d(TAG, "tryInitMediaPipeGenerator called with enableGpu: $enableGpu")
         Log.d(TAG, "Model path: $modelPath")
 
         try {
             val baseOptionsBuilder = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelPath)
-
             mpTextGenerator = LlmInference.createFromOptions(context, baseOptionsBuilder.build())
-
-            if (mpTextGenerator != null) {
-                Log.d(TAG, "Initialized via createFromOptions with GPU=$enableGpu")
-            } else {
-                Log.w(TAG, "createFromOptions returned null")
-            }
-
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize LlmInference: ${e.message}", e)
             mpTextGenerator = null

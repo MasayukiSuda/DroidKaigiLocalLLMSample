@@ -3,8 +3,8 @@ package com.daasuu.llmsample.data.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.daasuu.llmsample.data.model.LLMProvider
@@ -32,20 +32,9 @@ class SettingsRepositoryImpl @Inject constructor(
             LLMProvider.entries.getOrNull(ordinal) ?: LLMProvider.LITE_RT
         }
 
-    override val isGpuEnabled: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
-            prefs[Keys.GPU_ENABLED] ?: false
-        }
-
     override suspend fun setCurrentProvider(provider: LLMProvider) {
         context.dataStore.edit { prefs ->
             prefs[Keys.CURRENT_PROVIDER] = provider.ordinal
-        }
-    }
-
-    override suspend fun setGpuEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.GPU_ENABLED] = enabled
         }
     }
 }
