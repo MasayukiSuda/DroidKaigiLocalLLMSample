@@ -7,6 +7,7 @@ import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import timber.log.Timber
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -84,13 +85,13 @@ class ChatViewModel @Inject constructor(
                     }
                     _messages.value = currentMessages
                 }
-                println("[CHAT] LLM Final Response: ${responseBuilder.toString()}")
+                Timber.d("[CHAT] LLM Final Response: ${responseBuilder.toString()}")
             } catch (e: Exception) {
                 val errorMessage = ChatMessage(
                     content = "Error: ${e.message}",
                     isUser = false
                 )
-                println("errorMessage = ${errorMessage.content}")
+                Timber.e("errorMessage = ${errorMessage.content}")
                 _messages.value = _messages.value + errorMessage
             } finally {
                 _isLoading.value = false

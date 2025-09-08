@@ -1,8 +1,8 @@
 package com.daasuu.llmsample.data.llm.llamacpp
 
 import android.llama.cpp.LLamaAndroid
-import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
+import timber.log.Timber
 import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.data.settings.SettingsRepository
@@ -57,13 +57,13 @@ class LlamaCppRepository @Inject constructor(
                         }
                     }
                     // If we get here, no models worked
-                    println("All downloaded models failed to load, falling back to mock")
+                    Timber.d("All downloaded models failed to load, falling back to mock")
                 } else {
-                    println("No downloaded models found, using mock implementation")
+                    Timber.d("No downloaded models found, using mock implementation")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                println("Exception during LlamaCpp initialization: ${e.message}")
+                Timber.e(e, "Exception during LlamaCpp initialization: ${e.message}")
             }
         }
     }
@@ -74,27 +74,27 @@ class LlamaCppRepository @Inject constructor(
         // Check if model file actually exists and is readable
         val modelFile = java.io.File(modelPath)
         if (!modelFile.exists()) {
-            println("Model file does not exist: $modelPath")
+            Timber.w("Model file does not exist: $modelPath")
             return false
         }
         if (!modelFile.canRead()) {
-            println("Cannot read model file: $modelPath")
+            Timber.w("Cannot read model file: $modelPath")
             return false
         }
         if (modelFile.length() == 0L) {
-            println("Model file is empty: $modelPath")
+            Timber.w("Model file is empty: $modelPath")
             return false
         }
 
         return try {
-            println("Attempting to initialize LlamaCpp with model: ${modelInfo.name} at $modelPath (${modelFile.length()} bytes)")
+            Timber.d("Attempting to initialize LlamaCpp with model: ${modelInfo.name} at $modelPath (${modelFile.length()} bytes)")
             llamaAndroid.load(modelPath)
             isInitialized = true
             isMock = false
-            println("Successfully loaded model: ${modelInfo.name}")
+            Timber.d("Successfully loaded model: ${modelInfo.name}")
             true
         } catch (e: Exception) {
-            println("Failed to load model ${modelInfo.name}: ${e.message}")
+            Timber.w("Failed to load model ${modelInfo.name}: ${e.message}")
             false
         }
     }
@@ -119,7 +119,7 @@ class LlamaCppRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             llamaAndroid.send(fullPrompt, maxLength = 1024)
                 .catch { error ->
-                    Log.e("llamaAndroid", "send() failed", error)
+                    Timber.e(error, "send() failed")
                     trySend(" Error: $error")
                 }
                 .collect {
@@ -146,7 +146,7 @@ class LlamaCppRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             llamaAndroid.send(message = prompt, maxLength = 512)
                 .catch { error ->
-                    Log.e("llamaAndroid", "send() failed", error)
+                    Timber.e(error, "send() failed")
                     trySend(" Error: $error")
                 }
                 .collect {
@@ -193,7 +193,7 @@ class LlamaCppRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             llamaAndroid.send(prompt, maxLength = 512)
                 .catch { error ->
-                    Log.e("llamaAndroid", "send() failed", error)
+                    Timber.e(error, "send() failed")
                     trySend(" Error: $error")
                 }
                 .collect {

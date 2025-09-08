@@ -7,6 +7,7 @@ import com.daasuu.llmsample.data.model.TaskType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import timber.log.Timber
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +40,7 @@ class PerformanceLogger @Inject constructor(
         errorMessage: String? = null
     ) {
         // 追加デバッグ：受け取った値を確認
-        android.util.Log.d("PerformanceLogger", "記録する値: memoryUsage=${memoryUsageMB}MB, " +
+        Timber.d("記録する値: memoryUsage=${memoryUsageMB}MB, " +
             "maxSpike=${maxMemorySpikeMB}MB, average=${averageMemoryUsageMB}MB")
 
         val record = PerformanceRecord(

@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import timber.log.Timber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -128,7 +129,7 @@ class PerformanceMonitor @Inject constructor(
                 // 初回測定を即座に実行
                 val initialMemory = performanceMonitor.getCurrentMemoryUsage()
                 memoryReadings.add(initialMemory)
-                android.util.Log.d("MemorySession", "初期メモリー: ${initialMemory}MB")
+                Timber.d("初期メモリー: ${initialMemory}MB")
 
                 // より積極的な監視のために、最初の数回は短い間隔で測定
                 repeat(5) {
@@ -159,10 +160,7 @@ class PerformanceMonitor @Inject constructor(
 
             return if (memoryReadings.isNotEmpty()) {
                 // デバッグ情報（本番では削除可能）
-                android.util.Log.d(
-                    "PerformanceMonitor",
-                    "メモリー測定数: ${memoryReadings.size}, 値: $memoryReadings"
-                )
+                Timber.d("メモリー測定数: ${memoryReadings.size}, 値: $memoryReadings")
 
                 MemoryStats(
                     currentMemoryMB = memoryReadings.lastOrNull() ?: 0,

@@ -7,6 +7,7 @@ import com.daasuu.llmsample.data.model.TaskType
 import com.daasuu.llmsample.data.performance.PerformanceLogger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import timber.log.Timber
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.withLock
@@ -138,7 +139,7 @@ class LLMManager @Inject constructor(
 
         // 実行開始前のベースラインメモリを記録
         val baselineMemory = performanceMonitor.getCurrentMemoryUsage()
-        android.util.Log.d("LLMManager", "実行開始前ベースラインメモリ: ${baselineMemory}MB")
+        Timber.d("実行開始前ベースラインメモリ: ${baselineMemory}MB")
 
         // シンプルなメモリー監視用リスト
         val memoryReadings = mutableListOf<Int>()
@@ -155,20 +156,14 @@ class LLMManager @Inject constructor(
                     // 最初のトークン生成時のメモリ使用量を明示的に記録
                     val firstTokenMemory = performanceMonitor.getCurrentMemoryUsage()
                     memoryReadings.add(firstTokenMemory)
-                    android.util.Log.d(
-                        "LLMManager",
-                        "初回トークン生成時メモリ: ${firstTokenMemory}MB"
-                    )
+                    Timber.d("初回トークン生成時メモリ: ${firstTokenMemory}MB")
                 }
 
                 // 定期的にメモリーを追加測定（10トークンごと）
                 if (tokenCount % 10 == 0) {
                     val currentMemory = performanceMonitor.getCurrentMemoryUsage()
                     memoryReadings.add(currentMemory)
-                    android.util.Log.d(
-                        "LLMManager",
-                        "トークン ${tokenCount} 時メモリ: ${currentMemory}MB"
-                    )
+                    Timber.d("トークン ${tokenCount} 時メモリ: ${currentMemory}MB")
                 }
 
                 tokenCount++
@@ -182,10 +177,7 @@ class LLMManager @Inject constructor(
             // 実行完了直前のメモリを記録
             val preStopMemory = performanceMonitor.getCurrentMemoryUsage()
             memoryReadings.add(preStopMemory)
-            android.util.Log.d(
-                "LLMManager",
-                "実行完了直前メモリ: ${preStopMemory}MB, 実行時間: ${totalLatency}ms"
-            )
+            Timber.d("実行完了直前メモリ: ${preStopMemory}MB, 実行時間: ${totalLatency}ms")
 
             // バッテリー使用量計算
             val endBatteryLevel = performanceMonitor.getCurrentBatteryLevel()
@@ -203,14 +195,13 @@ class LLMManager @Inject constructor(
             } else 0
 
             // デバッグ情報をログ出力
-            android.util.Log.d(
-                "LLMManager", "メモリー統計 (直接計算): 測定数=${memoryReadings.size}, " +
+            Timber.d("メモリー統計 (直接計算): 測定数=${memoryReadings.size}, " +
                         "現在=${currentMemoryMB}MB, " +
                         "最大=${maxMemorySpikeMB}MB, " +
                         "平均=${averageMemoryUsageMB}MB, " +
                         "実行時間=${totalLatency}ms"
             )
-            android.util.Log.d("LLMManager", "全メモリー測定値: $memoryReadings")
+            Timber.d("全メモリー測定値: $memoryReadings")
 
             // パフォーマンス記録
             performanceLogger.logPerformance(
@@ -252,8 +243,7 @@ class LLMManager @Inject constructor(
                 memoryReadings.average().toInt()
             } else 0
 
-            android.util.Log.d(
-                "LLMManager", "エラー時メモリー統計: 測定数=${memoryReadings.size}, " +
+            Timber.d("エラー時メモリー統計: 測定数=${memoryReadings.size}, " +
                         "現在=${currentMemoryMB}MB, 最大=${maxMemorySpikeMB}MB, 平均=${averageMemoryUsageMB}MB"
             )
 

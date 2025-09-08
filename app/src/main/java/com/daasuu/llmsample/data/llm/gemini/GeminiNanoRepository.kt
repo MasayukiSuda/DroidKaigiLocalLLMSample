@@ -7,6 +7,7 @@ import com.google.ai.edge.aicore.GenerativeAIException
 import com.google.ai.edge.aicore.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import timber.log.Timber
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -90,27 +91,27 @@ class GeminiNanoRepository @Inject constructor(
         var firstTokenTime = 0L // ← ローカル変数: リクエストごとに独立
 
         try {
-            println("🚀 Using real Gemini Nano API for: ${prompt.take(50)}...")
+            Timber.d("🚀 Using real Gemini Nano API for: ${prompt.take(50)}...")
             // Use streaming generation for real-time response
             model.generateContentStream(prompt)
                 .onCompletion {
-                    println("✅ Gemini Nano stream completed")
+                    Timber.d("✅ Gemini Nano stream completed")
                 }
                 .collect { response ->
                     response.text?.let { text ->
                         if (firstTokenTime == 0L) {
                             firstTokenTime = System.currentTimeMillis() - startTime
-                            println("⚡ First token received in ${firstTokenTime}ms")
+                            Timber.d("⚡ First token received in ${firstTokenTime}ms")
                         }
                         emit(text)
                     }
                 }
         } catch (e: GenerativeAIException) {
             // Handle specific AI generation errors
-            println("❌ GenerativeAI Error: ${e.message}")
+            Timber.e("❌ GenerativeAI Error: ${e.message}")
             emit("Error: ${e.message}")
         } catch (e: Exception) {
-            println("⚠️ Falling back to mock response due to: ${e.message}")
+            Timber.w("⚠️ Falling back to mock response due to: ${e.message}")
             e.printStackTrace()
             // Fallback to mock on other errors
             mockGenerate(prompt, startTime)
@@ -118,7 +119,7 @@ class GeminiNanoRepository @Inject constructor(
     }
 
     private suspend fun FlowCollector<String>.mockGenerate(prompt: String, startTime: Long) {
-        println("🤖 Using mock response for demonstration")
+        Timber.d("🤖 Using mock response for demonstration")
         var firstTokenTime = 0L // ← モック用のローカル変数
 
         val response = when {

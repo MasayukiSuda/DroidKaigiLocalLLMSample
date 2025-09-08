@@ -6,6 +6,7 @@ import com.daasuu.llmsample.data.model.ModelInfo
 import com.daasuu.llmsample.data.model_manager.ModelManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import timber.log.Timber
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -34,7 +35,7 @@ class ModelDownloadViewModel @Inject constructor(
 
     fun downloadModel(modelId: String) {
         viewModelScope.launch {
-            android.util.Log.d("ModelDownloadVM", "Starting download for model: $modelId")
+            Timber.d("Starting download for model: $modelId")
             modelManager.downloadModel(
                 modelId = modelId,
                 onProgress = { progress ->
@@ -43,31 +44,21 @@ class ModelDownloadViewModel @Inject constructor(
                 }
             ).fold(
                 onSuccess = {
-                    android.util.Log.d("ModelDownloadVM", "Download completed for model: $modelId")
+                    Timber.d("Download completed for model: $modelId")
                     _downloadingModels.value = _downloadingModels.value - modelId
                     loadModels()
                 },
                 onFailure = { error ->
-                    android.util.Log.e(
-                        "ModelDownloadVM",
-                        "Download failed for model: $modelId",
-                        error
-                    )
+                    Timber.e(error, "Download failed for model: $modelId")
                     _downloadingModels.value = _downloadingModels.value - modelId
                     when (error) {
                         is IllegalStateException -> {
                             // 手動配置が必要なモデルの場合
-                            android.util.Log.w(
-                                "ModelDownloadVM",
-                                "Manual placement required for model: $modelId"
-                            )
+                            Timber.w("Manual placement required for model: $modelId")
                         }
 
                         else -> {
-                            android.util.Log.e(
-                                "ModelDownloadVM",
-                                "Unexpected error during download: ${error.message}"
-                            )
+                            Timber.e("Unexpected error during download: ${error.message}")
                         }
                     }
                 }
@@ -77,14 +68,14 @@ class ModelDownloadViewModel @Inject constructor(
 
     fun deleteModel(modelId: String) {
         viewModelScope.launch {
-            android.util.Log.d("ModelDownloadVM", "Deleting model: $modelId")
+            Timber.d("Deleting model: $modelId")
             modelManager.deleteModel(modelId).fold(
                 onSuccess = {
-                    android.util.Log.d("ModelDownloadVM", "Model deleted successfully: $modelId")
+                    Timber.d("Model deleted successfully: $modelId")
                     loadModels()
                 },
                 onFailure = { error ->
-                    android.util.Log.e("ModelDownloadVM", "Failed to delete model: $modelId", error)
+                    Timber.e(error, "Failed to delete model: $modelId")
                 }
             )
         }
