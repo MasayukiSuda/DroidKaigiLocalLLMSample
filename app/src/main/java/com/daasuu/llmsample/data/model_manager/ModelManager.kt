@@ -2,7 +2,7 @@ package com.daasuu.llmsample.data.model_manager
 
 import android.content.Context
 import android.content.res.AssetManager
-import com.daasuu.llmsample.data.model.LLMProvider
+import android.util.Log
 import com.daasuu.llmsample.data.model.ModelInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -20,12 +20,11 @@ class ModelManager @Inject constructor(
 ) {
 
     // 利用可能なモデルの定義
-    private val availableModels = listOf(
+    val downloadableModels = listOf(
         // Japanese Language Models
         ModelInfo(
             id = MODEL_ID_LLAMA_3_8B_COSMOPEDIA_JAPANESE,
             name = "LLaMA-3-8B Cosmopedia Japanese Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/mmnga/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-gguf/resolve/main/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-IQ4_XS.gguf?download=true",
             fileSize = 4800000000L, // ~4.8GB (approx)
             description = "LLaMA-3-8B fine-tuned on Japanese data with Cosmopedia dataset"
@@ -33,7 +32,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B,
             name = "ELYZA Japanese LLaMA-2-7B Fast Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/mmnga/ELYZA-japanese-Llama-2-7b-fast-instruct-gguf/resolve/main/ELYZA-japanese-Llama-2-7b-fast-instruct-q4_K_M.gguf?download=true",
             fileSize = 4200000000L, // ~4.2GB (approx)
             description = "ELYZA's Japanese-tuned LLaMA-2-7B model optimized for fast inference"
@@ -41,7 +39,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_SUZUME_LLAMA_3_8B_JAPANESE,
             name = "Suzume-llama-3-8B-japanese-Q4_K_M.gguf",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/tensorblock/suzume-llama-3-8B-japanese-GGUF/resolve/main/suzume-llama-3-8B-japanese-Q4_K_M.gguf",
             fileSize = 4900000000L, // ~4.2GB (approx)
             description = "Japanese LLaMA-3-8B model fine-tuned"
@@ -49,7 +46,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_LLAMA_3_2_3B_INSTRUCT,
             name = "Llama 3.2 3B Instruct Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
             fileSize = 2300000000L, // ~2.3GB (approx)
             description = "Meta Llama 3.2 3B Instruct quantized to 4-bit (Q4_K_M)"
@@ -57,7 +53,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_LLAMA_3_2_1B_INSTRUCT,
             name = "Llama 3.2 1B Instruct Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
             fileSize = 934281216L, // ~890MB
             description = "Meta Llama 3.2 1B Instruct - smaller version of Llama 3.2"
@@ -65,7 +60,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_LLAMA_3_1_8B_INSTRUCT,
             name = "Llama 3.1 8B Instruct Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
             fileSize = 4830000000L, // ~4.5GB (approx)
             description = "Meta Llama 3.1 8B Instruct - larger, more capable model"
@@ -73,7 +67,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_QWEN2_5_3B_INSTRUCT,
             name = "Qwen2.5 3B Instruct Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
             fileSize = 2100000000L, // ~2GB (approx)
             description = "Alibaba Qwen2.5 3B Instruct - excellent multilingual support"
@@ -81,7 +74,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_TINYLLAMA_1_1B,
             name = "TinyLlama 1.1B Q4",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_0.gguf",
             fileSize = 669769472L, // ~640MB
             description = "Lightweight TinyLlama model for quick testing"
@@ -89,7 +81,6 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_PHI_2,
             name = "Phi-2 Q4",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
             fileSize = 1610612736L, // ~1.5GB
             description = "Microsoft Phi-2 model quantized to 4-bit"
@@ -97,40 +88,14 @@ class ModelManager @Inject constructor(
         ModelInfo(
             id = MODEL_ID_PHI_3_5_MINI_INSTRUCT,
             name = "Phi-3.5 Mini Instruct Q4_K_M",
-            provider = LLMProvider.LLAMA_CPP,
             downloadUrl = "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
             fileSize = 2300000000L, // ~2.2GB (approx)
             description = "Microsoft Phi-3.5 Mini Instruct - improved version of Phi series"
         ),
-        // Gemma3 Models (LiteRT/Task format)
-        ModelInfo(
-            id = MODEL_ID_GEMMA3_2B_TASK,
-            name = "Gemma3 2B (.task)",
-            provider = LLMProvider.LITE_RT,
-            downloadUrl = "", // Manual placement required
-            fileSize = 1500000000L, // ~1.5GB (approx)
-            description = "Google Gemma3 2B model in TensorFlow Lite Task format - place manually in assets"
-        ),
-        ModelInfo(
-            id = MODEL_ID_GEMMA3_9B_TASK,
-            name = "Gemma3 9B (.task)",
-            provider = LLMProvider.LITE_RT,
-            downloadUrl = "", // Manual placement required
-            fileSize = 5000000000L, // ~5GB (approx)
-            description = "Google Gemma3 9B model in TensorFlow Lite Task format - place manually in assets"
-        ),
-        ModelInfo(
-            id = MODEL_ID_GEMMA3_27B_TASK,
-            name = "Gemma3 27B (.task)",
-            provider = LLMProvider.LITE_RT,
-            downloadUrl = "", // Manual placement required
-            fileSize = 15000000000L, // ~15GB (approx)
-            description = "Google Gemma3 27B model in TensorFlow Lite Task format - place manually in assets"
-        ),
     )
 
     fun getAvailableModels(): List<ModelInfo> {
-        return availableModels.map { model ->
+        return downloadableModels.map { model ->
             val localFile = getModelFile(model)
             model.copy(
                 isDownloaded = localFile.exists(),
@@ -139,12 +104,8 @@ class ModelManager @Inject constructor(
         }
     }
 
-    fun getModelsByProvider(provider: LLMProvider): List<ModelInfo> {
-        return getAvailableModels().filter { it.provider == provider }
-    }
-
     suspend fun deleteModel(modelId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        val model = availableModels.find { it.id == modelId }
+        val model = downloadableModels.find { it.id == modelId }
             ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
 
         val localFile = getModelFile(model)
@@ -163,7 +124,7 @@ class ModelManager @Inject constructor(
         modelId: String,
         onProgress: (ModelDownloader.DownloadProgress) -> Unit
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        val model = availableModels.find { it.id == modelId }
+        val model = downloadableModels.find { it.id == modelId }
             ?: return@withContext Result.failure(IllegalArgumentException("Model not found: $modelId"))
 
         // 空のダウンロードURLをチェック
@@ -178,7 +139,7 @@ class ModelManager @Inject constructor(
             return@withContext Result.success(Unit)
         }
 
-        android.util.Log.d(
+        Log.d(
             "ModelManager",
             "Starting download for model: ${model.name} (${model.id})"
         )
@@ -193,12 +154,8 @@ class ModelManager @Inject constructor(
 
     private fun getModelFile(model: ModelInfo): File {
         val modelsDir = File(context.filesDir, "models")
-        val providerDir = File(modelsDir, model.provider.name.lowercase())
-        val fileName = when (model.provider) {
-            LLMProvider.LLAMA_CPP -> "${model.id}.gguf"
-            LLMProvider.LITE_RT -> "${model.id}.tflite"
-            LLMProvider.GEMINI_NANO -> "${model.id}.bin" // Placeholder
-        }
+        val providerDir = File(modelsDir, "llama_cpp")
+        val fileName = "${model.id}.gguf"
         return File(providerDir, fileName)
     }
 
@@ -206,9 +163,6 @@ class ModelManager @Inject constructor(
     suspend fun copyModelsFromAssets() = withContext(Dispatchers.IO) {
         try {
             val assetManager = context.assets
-
-            // llama_cppモデルをコピー
-            copyModelsFromAssetsForProvider(assetManager, "models/llama_cpp")
 
             // lite_rtモデルをコピー
             copyModelsFromAssetsForProvider(assetManager, "models/lite_rt")
@@ -288,7 +242,7 @@ class ModelManager @Inject constructor(
                     else -> continue
                 }
 
-                val model = availableModels.find { it.id == modelId } ?: continue
+                val model = downloadableModels.find { it.id == modelId } ?: continue
                 val targetFile = getModelFile(model)
 
                 // ファイルが既に存在する場合はスキップ

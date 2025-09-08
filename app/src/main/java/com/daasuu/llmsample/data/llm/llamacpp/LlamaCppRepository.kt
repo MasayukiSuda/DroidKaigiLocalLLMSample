@@ -3,14 +3,15 @@ package com.daasuu.llmsample.data.llm.llamacpp
 import android.llama.cpp.LLamaAndroid
 import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
-import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.data.prompts.CommonPrompts
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +20,7 @@ import javax.inject.Singleton
 class LlamaCppRepository @Inject constructor(
     private val modelManager: ModelManager,
     private val llamaAndroid: LLamaAndroid,
+    private val settingsRepository: SettingsRepository,
 ) : LLMRepository {
 
     private var isInitialized = false
@@ -30,35 +32,29 @@ class LlamaCppRepository @Inject constructor(
 
         withContext(Dispatchers.IO) {
             try {
-                // Try to find downloaded models for llama.cpp
-                val downloadedModels = modelManager.getModelsByProvider(LLMProvider.LLAMA_CPP)
+                // Get user-selected model preference
+                val selectedModelId = settingsRepository.selectedLlamaModel.first()
+
+                // Get all downloaded models
+                val downloadedModels = modelManager.getAvailableModels()
                     .filter { it.isDownloaded }
 
                 if (downloadedModels.isNotEmpty()) {
+                    // If a specific model is selected, try it first
+                    selectedModelId?.let { modelId ->
+                        val selectedModel = downloadedModels.find { it.id == modelId }
+                        selectedModel?.let { model ->
+                            if (tryLoadModel(model)) {
+                                return@withContext
+                            }
+                        }
+                    }
+
+                    // If no specific model selected or selected model failed, try all downloaded models
                     for (modelInfo in downloadedModels) {
-                        val modelPath = modelInfo.localPath!!
-
-                        // Check if model file actually exists and is readable
-                        val modelFile = java.io.File(modelPath)
-                        if (!modelFile.exists()) {
-                            println("Model file does not exist: $modelPath")
-                            continue
+                        if (tryLoadModel(modelInfo)) {
+                            return@withContext
                         }
-                        if (!modelFile.canRead()) {
-                            println("Cannot read model file: $modelPath")
-                            continue
-                        }
-                        if (modelFile.length() == 0L) {
-                            println("Model file is empty: $modelPath")
-                            continue
-                        }
-
-                        println("Attempting to initialize LlamaCpp with model: $modelPath (${modelFile.length()} bytes)")
-
-                        llamaAndroid.load(modelPath)
-                        isInitialized = true
-                        isMock = false
-                        return@withContext
                     }
                     // If we get here, no models worked
                     println("All downloaded models failed to load, falling back to mock")
@@ -69,6 +65,37 @@ class LlamaCppRepository @Inject constructor(
                 e.printStackTrace()
                 println("Exception during LlamaCpp initialization: ${e.message}")
             }
+        }
+    }
+
+    private suspend fun tryLoadModel(modelInfo: com.daasuu.llmsample.data.model.ModelInfo): Boolean {
+        val modelPath = modelInfo.localPath ?: return false
+
+        // Check if model file actually exists and is readable
+        val modelFile = java.io.File(modelPath)
+        if (!modelFile.exists()) {
+            println("Model file does not exist: $modelPath")
+            return false
+        }
+        if (!modelFile.canRead()) {
+            println("Cannot read model file: $modelPath")
+            return false
+        }
+        if (modelFile.length() == 0L) {
+            println("Model file is empty: $modelPath")
+            return false
+        }
+
+        return try {
+            println("Attempting to initialize LlamaCpp with model: ${modelInfo.name} at $modelPath (${modelFile.length()} bytes)")
+            llamaAndroid.load(modelPath)
+            isInitialized = true
+            isMock = false
+            println("Successfully loaded model: ${modelInfo.name}")
+            true
+        } catch (e: Exception) {
+            println("Failed to load model ${modelInfo.name}: ${e.message}")
+            false
         }
     }
 
