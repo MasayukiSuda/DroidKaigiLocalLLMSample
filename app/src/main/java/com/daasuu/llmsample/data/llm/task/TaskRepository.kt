@@ -7,8 +7,10 @@ import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
+import com.google.mediapipe.tasks.genai.llminference.ProgressListener
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -48,12 +50,27 @@ class TaskRepository @Inject constructor(
                 }
 
                 val destDir = File(context.filesDir, "models/lite_rt/gemma3")
-                if (!destDir.exists()) destDir.mkdirs()
+                if (!destDir.exists()) {
+                    destDir.mkdirs()
+                    Log.d(TAG, "Created destination directory")
+                }
+
                 copyAssets("models/lite_rt/gemma3", destDir)
-                val taskFile =
-                    destDir.listFiles()?.firstOrNull { it.extension.equals("task", true) }
+
+                val allFiles = destDir.listFiles()
+
+                val taskFile = allFiles?.firstOrNull { it.extension.equals("task", true) }
                 taskModelPath = taskFile?.absolutePath
                 Log.d(TAG, "taskModelPath=$taskModelPath")
+
+                if (taskFile == null) {
+                    Log.w(TAG, "No .task file found in directory")
+                } else {
+                    Log.d(
+                        TAG,
+                        "Found .task file: ${taskFile.name}, size: ${taskFile.length()} bytes"
+                    )
+                }
 
                 if (taskModelPath != null) {
                     val isGpuEnabled = settingsRepository.isGpuEnabled.first()
@@ -170,14 +187,28 @@ class TaskRepository @Inject constructor(
             prompt // 最適化モード: プロンプトをそのまま使用
         }
 
-        val generated = withContext(Dispatchers.IO) { runMediaPipeGenerate(finalPrompt) }
-        if (generated != null) {
-            generated.split(" ").forEach { token ->
-                send("$token ")
+        Log.d(
+            TAG,
+            "generateChatResponse: isInitialized=$isInitialized, mpTextGenerator=$mpTextGenerator"
+        )
+
+        var hasEmitted = false
+        try {
+            Log.d(TAG, "Starting runMediaPipeGenerate flow collection...")
+            runMediaPipeGenerate(finalPrompt).collect { token ->
+                Log.d(TAG, "Received token from runMediaPipeGenerate: '$token'")
+                send(token)
+                hasEmitted = true
                 delay(12)
             }
-        } else {
-            Log.w(TAG, "MediaPipe generate failed; falling back to mock")
+            Log.d(TAG, "runMediaPipeGenerate flow collection completed, hasEmitted=$hasEmitted")
+        } catch (e: Exception) {
+            Log.w(TAG, "MediaPipe generate failed: ${e.message}; falling back to mock")
+            hasEmitted = false
+        }
+
+        if (!hasEmitted) {
+            Log.w(TAG, "No tokens were emitted, falling back to mock response")
             withContext(Dispatchers.IO) {
                 ("[task mock] Gemma3: $finalPrompt").split(" ").forEach {
                     send(it + " ")
@@ -199,8 +230,20 @@ class TaskRepository @Inject constructor(
             "要約してください: \n\n$text" // 最適化モード: MediaPipe GenAI API向けシンプルプロンプト
         }
 
-        val full = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
-        send(full ?: ("- 要約(擬似): " + text.take(40) + "..."))
+        var hasEmitted = false
+        try {
+            runMediaPipeGenerate(prompt).collect { token ->
+                send(token)
+                hasEmitted = true
+                delay(12)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "MediaPipe generate failed: ${e.message}")
+        }
+
+        if (!hasEmitted) {
+            send("- 要約(擬似): " + text.take(40) + "...")
+        }
     }
 
     override suspend fun proofreadText(text: String): Flow<String> = channelFlow {
@@ -219,8 +262,20 @@ class TaskRepository @Inject constructor(
             "$instruction\n\n入力: $text"
         }
 
-        val full = withContext(Dispatchers.IO) { runMediaPipeGenerate(prompt) }
-        send(full ?: "{\"corrected_text\":\"$text\",\"corrections\":[]}")
+        var hasEmitted = false
+        try {
+            runMediaPipeGenerate(prompt).collect { token ->
+                send(token)
+                hasEmitted = true
+                delay(12)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "MediaPipe generate failed: ${e.message}")
+        }
+
+        if (!hasEmitted) {
+            send("{\"corrected_text\":\"$text\",\"corrections\":[]}")
+        }
     }
 
     private fun copyAssets(assetPath: String, destDir: File) {
@@ -272,22 +327,47 @@ class TaskRepository @Inject constructor(
         }
     }
 
-    private fun runMediaPipeGenerate(prompt: String): String? {
-        val gen = mpTextGenerator ?: return null
-        return try {
-            Log.d(TAG, "Starting MediaPipe generation with prompt length: ${prompt.length}")
-            // 直接generateResponseメソッドを呼び出し
-            val result = gen.generateResponse(prompt)
-            Log.d(TAG, "MediaPipe generation completed")
+    private fun runMediaPipeGenerate(prompt: String): Flow<String> = channelFlow {
+        Log.d(TAG, "runMediaPipeGenerate called with prompt length: ${prompt.length}")
 
-            result
+        val gen = mpTextGenerator
+        if (gen == null) {
+            Log.w(TAG, "MediaPipe generator not available - mpTextGenerator is null")
+            return@channelFlow
+        }
+
+        try {
+            Log.d(TAG, "Starting MediaPipe generation with prompt length: ${prompt.length}")
+
+            // Create callback for async response
+            val callback = ProgressListener<String> { partialResult, done ->
+                Log.d(TAG, "[CALLBACK] partialResult='$partialResult', done=$done")
+                if (partialResult?.isNotBlank() == true) {
+                    trySend(partialResult)
+                }
+                if (done) {
+                    Log.d(TAG, "[CALLBACK] Generation completed, closing channel")
+                    close() // Close the channel when generation is complete
+                }
+            }
+
+            Log.d(TAG, "Calling generateResponseAsync...")
+            // Use generateResponseAsync directly
+            gen.generateResponseAsync(prompt, callback)
+            Log.d(TAG, "generateResponseAsync called successfully")
+
+            // Wait for the callback to complete or channel to be closed
+            awaitClose {
+                Log.d(TAG, "ChannelFlow is being closed")
+            }
         } catch (t: Throwable) {
+            // JobCancellationExceptionは正常な終了の場合に発生するため、ログレベルを下げる
             Log.e(
                 TAG,
                 "MediaPipe generation failed with exception: ${t.javaClass.simpleName}: ${t.message}",
                 t
             )
-            null
+            close(t)
         }
     }
 }
