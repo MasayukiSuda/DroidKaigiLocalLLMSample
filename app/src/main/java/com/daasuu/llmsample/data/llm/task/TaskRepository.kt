@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.prompts.CommonPrompts
+import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.ProgressListener
@@ -13,6 +14,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -21,6 +23,7 @@ import javax.inject.Singleton
 @Singleton
 class TaskRepository @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository,
 ) : LLMRepository {
 
     private val TAG = "TaskGenAI"
@@ -253,14 +256,16 @@ class TaskRepository @Inject constructor(
         }
     }
 
-    private fun tryInitMediaPipeGenerator(modelPath: String?) {
+    private suspend fun tryInitMediaPipeGenerator(modelPath: String?) {
         modelPath ?: return
 
         Log.d(TAG, "Model path: $modelPath")
 
         try {
+            val isGpuEnabled = settingsRepository.isGpuEnabled.first()
             val baseOptionsBuilder = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelPath)
+                .setPreferredBackend(if (isGpuEnabled) LlmInference.Backend.GPU else LlmInference.Backend.CPU)
                 .build()
             llmInference = LlmInference.createFromOptions(context, baseOptionsBuilder)
         } catch (e: Exception) {

@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,6 +47,8 @@ fun SettingsScreen(
     val models by viewModel.models.collectAsState()
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     val isBenchmarkMode by BenchmarkMode.isEnabled.collectAsState()
+    val isGpuEnabled by viewModel.isGpuEnabled.collectAsState()
+    val shouldShowGpuSettings = selectedProvider == LLMProvider.LITE_RT
 
     LazyColumn(
         modifier = Modifier
@@ -216,6 +219,53 @@ fun SettingsScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (shouldShowGpuSettings) {
+            item {
+                // GPU Settings (only shown when Gemma3/LITE_RT is selected)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "GPU 設定",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "GPU アクセラレーション",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "推論処理にGPUを使用します（MediaPipe GPU Delegate）",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+
+                            Switch(
+                                checked = isGpuEnabled,
+                                onCheckedChange = { viewModel.setGpuEnabled(it) }
+                            )
                         }
                     }
                 }

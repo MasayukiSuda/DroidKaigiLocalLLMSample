@@ -62,6 +62,39 @@ class SettingsViewModel @Inject constructor(
                 llmManager.setCurrentProvider(provider)
             }
         }
+
+        // GPU設定を監視し、変更時にLITE_RTプロバイダーを再初期化
+        viewModelScope.launch {
+            var isFirst = true
+            settingsRepository.isGpuEnabled.collect { enabled ->
+                val previousValue = _isGpuEnabled.value
+                _isGpuEnabled.value = enabled
+
+                // 初回以外で、かつGPU設定が実際に変更され、現在LITE_RTが選択されている場合に再初期化
+                if (!isFirst && previousValue != enabled && _selectedProvider.value == LLMProvider.LITE_RT) {
+                    android.util.Log.d(
+                        "SettingsViewModel",
+                        "GPU setting changed from $previousValue to $enabled, reinitializing TaskRepository..."
+                    )
+                    try {
+                        llmManager.reinitializeCurrentProvider()
+                        android.util.Log.d(
+                            "SettingsViewModel",
+                            "TaskRepository successfully reinitialized with GPU setting: $enabled"
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e(
+                            "SettingsViewModel",
+                            "Critical error during TaskRepository reinitialization",
+                            e
+                        )
+                        // ユーザーに問題を通知することも検討
+                        // 必要に応じて設定をロールバックする処理も追加可能
+                    }
+                }
+                isFirst = false
+            }
+        }
     }
 
     fun refreshModels() {
@@ -129,6 +162,12 @@ class SettingsViewModel @Inject constructor(
             }
 
             else -> null
+        }
+    }
+
+    fun setGpuEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setGpuEnabled(enabled)
         }
     }
 }

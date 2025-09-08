@@ -32,9 +32,20 @@ class SettingsRepositoryImpl @Inject constructor(
             LLMProvider.entries.getOrNull(ordinal) ?: LLMProvider.LITE_RT
         }
 
+    override val isGpuEnabled: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[Keys.GPU_ENABLED] ?: false
+        }
+
     override suspend fun setCurrentProvider(provider: LLMProvider) {
         context.dataStore.edit { prefs ->
             prefs[Keys.CURRENT_PROVIDER] = provider.ordinal
+        }
+    }
+
+    override suspend fun setGpuEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.GPU_ENABLED] = enabled
         }
     }
 }
