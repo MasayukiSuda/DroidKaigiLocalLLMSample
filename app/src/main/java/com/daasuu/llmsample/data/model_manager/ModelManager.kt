@@ -2,9 +2,9 @@ package com.daasuu.llmsample.data.model_manager
 
 import android.content.Context
 import android.content.res.AssetManager
-import android.util.Log
 import com.daasuu.llmsample.data.model.ModelInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
+import timber.log.Timber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -139,10 +139,7 @@ class ModelManager @Inject constructor(
             return@withContext Result.success(Unit)
         }
 
-        Log.d(
-            "ModelManager",
-            "Starting download for model: ${model.name} (${model.id})"
-        )
+        Timber.d("Starting download for model: ${model.name} (${model.id})")
 
         modelDownloader.downloadModel(
             url = model.downloadUrl,

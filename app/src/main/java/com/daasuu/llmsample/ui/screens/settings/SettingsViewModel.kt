@@ -10,6 +10,7 @@ import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import timber.log.Timber
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -62,22 +63,12 @@ class SettingsViewModel @Inject constructor(
 
                 // 初回以外で、かつGPU設定が実際に変更され、現在LITE_RTが選択されている場合に再初期化
                 if (!isFirst && previousValue != enabled && _selectedProvider.value == LLMProvider.LITE_RT) {
-                    android.util.Log.d(
-                        "SettingsViewModel",
-                        "GPU setting changed from $previousValue to $enabled, reinitializing TaskRepository..."
-                    )
+                    Timber.d("GPU setting changed from $previousValue to $enabled, reinitializing TaskRepository...")
                     try {
                         llmManager.reinitializeCurrentProvider()
-                        android.util.Log.d(
-                            "SettingsViewModel",
-                            "TaskRepository successfully reinitialized with GPU setting: $enabled"
-                        )
+                        Timber.d("TaskRepository successfully reinitialized with GPU setting: $enabled")
                     } catch (e: Exception) {
-                        android.util.Log.e(
-                            "SettingsViewModel",
-                            "Critical error during TaskRepository reinitialization",
-                            e
-                        )
+                        Timber.e(e, "Critical error during TaskRepository reinitialization")
                         // ユーザーに問題を通知することも検討
                         // 必要に応じて設定をロールバックする処理も追加可能
                     }
@@ -92,22 +83,12 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.selectedLlamaModel.collect { selectedModelId ->
                 // 初回以外で、現在LLAMA_CPPが選択されている場合に再初期化
                 if (!isFirst && _selectedProvider.value == LLMProvider.LLAMA_CPP) {
-                    android.util.Log.d(
-                        "SettingsViewModel",
-                        "Llama model selection changed to: $selectedModelId, reinitializing LlamaCppRepository..."
-                    )
+                    Timber.d("Llama model selection changed to: $selectedModelId, reinitializing LlamaCppRepository...")
                     try {
                         llmManager.reinitializeCurrentProvider()
-                        android.util.Log.d(
-                            "SettingsViewModel",
-                            "LlamaCppRepository successfully reinitialized with selected model: $selectedModelId"
-                        )
+                        Timber.d("LlamaCppRepository successfully reinitialized with selected model: $selectedModelId")
                     } catch (e: Exception) {
-                        android.util.Log.e(
-                            "SettingsViewModel",
-                            "Critical error during LlamaCppRepository reinitialization",
-                            e
-                        )
+                        Timber.e(e, "Critical error during LlamaCppRepository reinitialization")
                         // ユーザーに問題を通知することも検討
                     }
                 }

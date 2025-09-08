@@ -6,6 +6,7 @@ import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import timber.log.Timber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,7 +96,7 @@ class ProofreadViewModel @Inject constructor(
             }
 
             val response = resultBuilder.toString().trim()
-            println("[PROOFREAD] LLM Final Response: $response")
+            Timber.d("[PROOFREAD] LLM Final Response: $response")
             _rawOutput.value = response
             if (response.isNotEmpty()) {
                 _correctedText.value = response

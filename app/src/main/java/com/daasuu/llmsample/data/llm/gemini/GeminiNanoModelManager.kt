@@ -5,6 +5,7 @@ import com.google.ai.edge.aicore.GenerativeModel
 import com.google.ai.edge.aicore.generationConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.sync.Mutex
+import timber.log.Timber
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,13 +36,13 @@ class GeminiNanoModelManager @Inject constructor(
             val compatibility = compatibilityChecker.isDeviceSupported()
             if (compatibility !is DeviceCompatibility.Supported) {
                 val message = compatibilityChecker.getCompatibilityMessage(compatibility)
-                println("Gemini Nano model creation failed: $message")
+                Timber.w("Gemini Nano model creation failed: $message")
                 return null
             }
 
             // モデル作成
             cachedModel = try {
-                println("Creating new Gemini Nano model...")
+                Timber.d("Creating new Gemini Nano model...")
                 GenerativeModel(
                     generationConfig {
                         context = this@GeminiNanoModelManager.context
@@ -50,10 +51,10 @@ class GeminiNanoModelManager @Inject constructor(
                         maxOutputTokens = 1000
                     }
                 ).also {
-                    println("Gemini Nano model created successfully")
+                    Timber.d("Gemini Nano model created successfully")
                 }
             } catch (e: Exception) {
-                println("Failed to create Gemini Nano model: ${e.message}")
+                Timber.e("Failed to create Gemini Nano model: ${e.message}")
                 e.printStackTrace()
                 null
             }
@@ -71,9 +72,9 @@ class GeminiNanoModelManager @Inject constructor(
             cachedModel?.let { model ->
                 try {
                     model.close()
-                    println("Gemini Nano model released")
+                    Timber.d("Gemini Nano model released")
                 } catch (e: Exception) {
-                    println("Error releasing Gemini Nano model: ${e.message}")
+                    Timber.w("Error releasing Gemini Nano model: ${e.message}")
                 }
             }
             cachedModel = null

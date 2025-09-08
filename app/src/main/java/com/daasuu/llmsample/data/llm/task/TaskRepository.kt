@@ -1,7 +1,6 @@
 package com.daasuu.llmsample.data.llm.task
 
 import android.content.Context
-import android.util.Log
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.prompts.CommonPrompts
 import com.daasuu.llmsample.data.settings.SettingsRepository
@@ -16,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,16 +34,16 @@ class TaskRepository @Inject constructor(
 
     override suspend fun initialize() {
         if (isInitialized) {
-            Log.d(TAG, "TaskRepository already initialized, skipping")
+            Timber.d("TaskRepository already initialized, skipping")
             return
         }
 
-        Log.d(TAG, "Initializing TaskRepository...")
+        Timber.d("Initializing TaskRepository...")
         withContext(Dispatchers.IO) {
             try {
                 // 前回のリソースが残っていれば確実にクリア
                 llmInference?.let {
-                    Log.w(TAG, "Previous generator instance found, clearing...")
+                    Timber.w("Previous generator instance found, clearing...")
                     llmInference?.close()
                     llmInference = null
                 }
@@ -51,7 +51,7 @@ class TaskRepository @Inject constructor(
                 val destDir = File(context.filesDir, "models/lite_rt/gemma3")
                 if (!destDir.exists()) {
                     destDir.mkdirs()
-                    Log.d(TAG, "Created destination directory")
+                    Timber.d("Created destination directory")
                 }
 
                 copyAssets("models/lite_rt/gemma3", destDir)
@@ -60,13 +60,12 @@ class TaskRepository @Inject constructor(
 
                 val taskFile = allFiles?.firstOrNull { it.extension.equals("task", true) }
                 val taskModelPath = taskFile?.absolutePath
-                Log.d(TAG, "taskModelPath=$taskModelPath")
+                Timber.d("taskModelPath=$taskModelPath")
 
                 if (taskFile == null) {
-                    Log.w(TAG, "No .task file found in directory")
+                    Timber.w("No .task file found in directory")
                 } else {
-                    Log.d(
-                        TAG,
+                    Timber.d(
                         "Found .task file: ${taskFile.name}, size: ${taskFile.length()} bytes"
                     )
                 }
@@ -79,21 +78,20 @@ class TaskRepository @Inject constructor(
                             initSuccess = true
                         }
                     } catch (e: Exception) {
-                        Log.w(
-                            TAG,
+                        Timber.w(
                             "Initialization failed, falling back to CPU: ${e.message}"
                         )
                         llmInference = null
                     }
 
                     isInitialized = initSuccess
-                    Log.d(TAG, "TaskRepository initialization completed: ${isInitialized}")
+                    Timber.d("TaskRepository initialization completed: ${isInitialized}")
                 } else {
-                    Log.w(TAG, "No .task model file found, TaskRepository not initialized")
+                    Timber.w("No .task model file found, TaskRepository not initialized")
                     isInitialized = false
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "TaskRepository initialization failed", e)
+                Timber.e(e, "TaskRepository initialization failed")
                 llmInference = null
                 isInitialized = false
             }
@@ -101,24 +99,24 @@ class TaskRepository @Inject constructor(
     }
 
     override suspend fun release() {
-        Log.d(TAG, "Releasing TaskRepository...")
+        Timber.d("Releasing TaskRepository...")
         withContext(Dispatchers.IO) {
             try {
                 // MediaPipe GenAI インスタンスを明示的にクリア
                 llmInference?.let { generator ->
                     try {
                         generator.close()
-                        Log.d(TAG, "MediaPipe generator closed successfully")
+                        Timber.d("MediaPipe generator closed successfully")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to close MediaPipe generator: ${e.message}")
+                        Timber.w("Failed to close MediaPipe generator: ${e.message}")
                     }
                 }
 
                 llmInference = null
                 isInitialized = false
-                Log.d(TAG, "TaskRepository released successfully")
+                Timber.d("TaskRepository released successfully")
             } catch (e: Exception) {
-                Log.e(TAG, "Error during TaskRepository release", e)
+                Timber.e(e, "Error during TaskRepository release")
                 // エラーがあってもisInitializedをfalseにしてリセット
                 llmInference = null
                 isInitialized = false
@@ -141,27 +139,26 @@ class TaskRepository @Inject constructor(
             prompt // 最適化モード: プロンプトをそのまま使用
         }
 
-        Log.d(
-            TAG,
+        Timber.d(
             "generateChatResponse: isInitialized=$isInitialized, mpTextGenerator=$llmInference"
         )
 
         var hasEmitted = false
         try {
-            Log.d(TAG, "Starting runMediaPipeGenerate flow collection...")
+            Timber.d("Starting runMediaPipeGenerate flow collection...")
             runMediaPipeGenerate(finalPrompt).collect { token ->
                 send(token)
                 hasEmitted = true
                 delay(12)
             }
-            Log.d(TAG, "runMediaPipeGenerate flow collection completed, hasEmitted=$hasEmitted")
+            Timber.d("runMediaPipeGenerate flow collection completed, hasEmitted=$hasEmitted")
         } catch (e: Exception) {
-            Log.w(TAG, "MediaPipe generate failed: ${e.message}; falling back to mock")
+            Timber.w("MediaPipe generate failed: ${e.message}; falling back to mock")
             hasEmitted = false
         }
 
         if (!hasEmitted) {
-            Log.w(TAG, "No tokens were emitted, falling back to mock response")
+            Timber.w("No tokens were emitted, falling back to mock response")
             withContext(Dispatchers.IO) {
                 ("[task mock] Gemma3: $finalPrompt").split(" ").forEach {
                     send(it + " ")
@@ -191,7 +188,7 @@ class TaskRepository @Inject constructor(
                 delay(12)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "MediaPipe generate failed: ${e.message}")
+            Timber.w("MediaPipe generate failed: ${e.message}")
         }
 
         if (!hasEmitted) {
@@ -223,7 +220,7 @@ class TaskRepository @Inject constructor(
                 delay(12)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "MediaPipe generate failed: ${e.message}")
+            Timber.w("MediaPipe generate failed: ${e.message}")
         }
 
         if (!hasEmitted) {
@@ -252,14 +249,14 @@ class TaskRepository @Inject constructor(
                 }
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "copyAssets failed: ${t.message}")
+            Timber.w("copyAssets failed: ${t.message}")
         }
     }
 
     private suspend fun tryInitMediaPipeGenerator(modelPath: String?) {
         modelPath ?: return
 
-        Log.d(TAG, "Model path: $modelPath")
+        Timber.d("Model path: $modelPath")
 
         try {
             val isGpuEnabled = settingsRepository.isGpuEnabled.first()
@@ -269,22 +266,22 @@ class TaskRepository @Inject constructor(
                 .build()
             llmInference = LlmInference.createFromOptions(context, baseOptionsBuilder)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize LlmInference: ${e.message}", e)
+            Timber.e("Failed to initialize LlmInference: ${e.message}", e)
             llmInference = null
         }
     }
 
     private fun runMediaPipeGenerate(prompt: String): Flow<String> = channelFlow {
-        Log.d(TAG, "runMediaPipeGenerate called with prompt length: ${prompt.length}")
+        Timber.d("runMediaPipeGenerate called with prompt length: ${prompt.length}")
 
         val llmInference = llmInference
         if (llmInference == null) {
-            Log.w(TAG, "MediaPipe generator not available - mpTextGenerator is null")
+            Timber.w("MediaPipe generator not available - mpTextGenerator is null")
             return@channelFlow
         }
 
         try {
-            Log.d(TAG, "Starting MediaPipe generation with prompt length: ${prompt.length}")
+            Timber.d("Starting MediaPipe generation with prompt length: ${prompt.length}")
 
             // Create callback for async response
             val callback = ProgressListener<String> { partialResult, done ->
@@ -297,18 +294,17 @@ class TaskRepository @Inject constructor(
             }
 
             llmInference.generateResponseAsync(prompt, callback)
-            Log.d(TAG, "generateResponseAsync called successfully")
+            Timber.d("generateResponseAsync called successfully")
 
             // Wait for the callback to complete or channel to be closed
             awaitClose {
-                Log.d(TAG, "ChannelFlow is being closed")
+                Timber.d("ChannelFlow is being closed")
             }
         } catch (t: Throwable) {
             // JobCancellationExceptionは正常な終了の場合に発生するため、ログレベルを下げる
-            Log.e(
-                TAG,
-                "MediaPipe generation failed with exception: ${t.javaClass.simpleName}: ${t.message}",
-                t
+            Timber.e(
+                t,
+                "MediaPipe generation failed with exception: ${t.javaClass.simpleName}: ${t.message}"
             )
             close(t)
         }

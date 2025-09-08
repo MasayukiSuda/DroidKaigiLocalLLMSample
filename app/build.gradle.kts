@@ -85,6 +85,9 @@ dependencies {
     // Google AI Edge SDK for Gemini Nano experimental access
     implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
 
+    // Timber for logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

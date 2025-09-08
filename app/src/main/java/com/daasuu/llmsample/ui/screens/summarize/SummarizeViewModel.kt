@@ -7,6 +7,7 @@ import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import timber.log.Timber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -79,7 +80,7 @@ class SummarizeViewModel @Inject constructor(
                 summaryBuilder.append(token)
                 _summaryText.value = summaryBuilder.toString()
             }
-            println("[SUMMARIZE] LLM Final Summary: ${summaryBuilder.toString()}")
+            Timber.d("[SUMMARIZE] LLM Final Summary: ${summaryBuilder.toString()}")
         } catch (e: Exception) {
             _summaryText.value = "Error: ${e.message}"
         } finally {

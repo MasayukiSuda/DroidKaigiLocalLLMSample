@@ -4,6 +4,7 @@ import android.content.Context
 import com.daasuu.llmsample.data.model.ModelInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import timber.log.Timber
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -43,10 +44,7 @@ class ModelDownloader @Inject constructor(
                 headConnection.disconnect()
                 if (contentLength > 0) contentLength else -1L
             } catch (e: Exception) {
-                android.util.Log.w(
-                    "ModelDownloader",
-                    "Failed to get content length via HEAD request: ${e.message}"
-                )
+                Timber.w("Failed to get content length via HEAD request: ${e.message}")
                 -1L
             }
 
@@ -63,10 +61,7 @@ class ModelDownloader @Inject constructor(
                 if (contentLength > 0) contentLength else model.fileSize
             }
 
-            android.util.Log.d(
-                "ModelDownloader",
-                "Downloading: $url, Total bytes: $finalTotalBytes"
-            )
+            Timber.d("Downloading: $url, Total bytes: $finalTotalBytes")
 
             var downloadedBytes = 0L
 
@@ -92,7 +87,7 @@ class ModelDownloader @Inject constructor(
                 }
             }
 
-            android.util.Log.d("ModelDownloader", "Download completed: $downloadedBytes bytes")
+            Timber.d("Download completed: $downloadedBytes bytes")
             Result.success(destinationFile)
         } catch (e: Exception) {
             // エラー時はファイルを削除
