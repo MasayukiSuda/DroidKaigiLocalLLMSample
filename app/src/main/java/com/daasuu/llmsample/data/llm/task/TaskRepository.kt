@@ -71,16 +71,14 @@ class TaskRepository @Inject constructor(
                 if (taskModelPath != null) {
                     var initSuccess = false
                     try {
-                        Log.d(TAG, "Attempting GPU initialization...")
                         tryInitMediaPipeGenerator(taskModelPath)
                         if (llmInference != null) {
                             initSuccess = true
-                            Log.d(TAG, "GPU initialization successful")
                         }
                     } catch (e: Exception) {
                         Log.w(
                             TAG,
-                            "GPU initialization failed, falling back to CPU: ${e.message}"
+                            "Initialization failed, falling back to CPU: ${e.message}"
                         )
                         llmInference = null
                     }
@@ -285,16 +283,14 @@ class TaskRepository @Inject constructor(
 
             // Create callback for async response
             val callback = ProgressListener<String> { partialResult, done ->
-                Log.d(TAG, "[CALLBACK] partialResult='$partialResult', done=$done")
                 if (partialResult?.isNotBlank() == true) {
                     trySend(partialResult)
                 }
                 if (done) {
-                    Log.d(TAG, "[CALLBACK] Generation completed, closing channel")
                     close() // Close the channel when generation is complete
                 }
             }
-            
+
             llmInference.generateResponseAsync(prompt, callback)
             Log.d(TAG, "generateResponseAsync called successfully")
 
