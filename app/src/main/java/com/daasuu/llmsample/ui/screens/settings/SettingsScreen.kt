@@ -4,32 +4,32 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.ModelTraining
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,18 +37,20 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import com.daasuu.llmsample.data.model.LLMProvider
-import com.daasuu.llmsample.data.model.ModelInfo
+import com.daasuu.llmsample.ui.screens.model_selection.ModelSelectionScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val models by viewModel.models.collectAsState()
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     val isBenchmarkMode by BenchmarkMode.isEnabled.collectAsState()
     val isGpuEnabled by viewModel.isGpuEnabled.collectAsState()
     val shouldShowGpuSettings = selectedProvider == LLMProvider.LITE_RT
+    val shouldShowModelSelection = selectedProvider == LLMProvider.LLAMA_CPP
+
+    var showModelSelectionDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -225,6 +227,51 @@ fun SettingsScreen(
             }
         }
 
+        // Llama.cpp Model Selection
+        if (shouldShowModelSelection) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Llama.cpp モデル選択",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        OutlinedButton(
+                            onClick = { showModelSelectionDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.ModelTraining,
+                                contentDescription = "モデル選択",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("使用するモデルを選択")
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "ダウンロード済みのモデルから使用するモデルを選択できます",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         if (shouldShowGpuSettings) {
             item {
                 // GPU Settings (only shown when Gemma3/LITE_RT is selected)
@@ -271,129 +318,25 @@ fun SettingsScreen(
                 }
             }
         }
-
-        // Models list
-        items(models) { model ->
-            ModelCard(
-                model = model,
-                onDelete = { viewModel.deleteModel(model.id) }
-            )
-        }
     }
-}
 
-@Composable
-fun ModelCard(
-    model: ModelInfo,
-    onDelete: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = model.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = model.provider.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = model.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                    Text(
-                        text = "サイズ: ${formatFileSize(model.fileSize)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
+    // モデル選択ダイアログ
+    if (showModelSelectionDialog) {
+        AlertDialog(
+            onDismissRequest = { showModelSelectionDialog = false },
+            title = {
+                Text("Llamaモデル選択")
+            },
+            text = {
+                ModelSelectionScreen()
+            },
+            confirmButton = {
+                TextButton(onClick = { showModelSelectionDialog = false }) {
+                    Text("閉じる")
                 }
-
-                when {
-                    model.isDownloaded -> {
-                        Row {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = "利用可能",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(onClick = onDelete) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "削除",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-
-                    else -> {
-                        Icon(
-                            Icons.Default.ErrorOutline,
-                            contentDescription = "未配置",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-
-            when {
-                model.isDownloaded -> {
-                    Text(
-                        text = "✓ モデルファイルが配置されています",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-
-                else -> {
-                    Column(
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Text(
-                            text = "モデルファイルが見つかりません",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "期待される配置先:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                        Text(
-                            text = when (model.provider) {
-                                LLMProvider.LLAMA_CPP -> "app/src/main/assets/models/llama_cpp/${model.id}.bin"
-                                LLMProvider.LITE_RT -> "app/src/main/assets/models/lite_rt/${model.id}.tflite"
-                                else -> "N/A"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                        )
-                    }
-                }
-            }
-        }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

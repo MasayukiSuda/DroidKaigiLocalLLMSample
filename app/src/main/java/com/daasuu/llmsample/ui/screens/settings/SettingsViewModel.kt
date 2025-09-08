@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.llm.gemini.DeviceCompatibility
 import com.daasuu.llmsample.data.llm.gemini.GeminiNanoCompatibilityChecker
 import com.daasuu.llmsample.data.model.LLMProvider
-import com.daasuu.llmsample.data.model.ModelInfo
 import com.daasuu.llmsample.data.model_manager.ModelManager
 import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMManager
@@ -25,18 +24,12 @@ class SettingsViewModel @Inject constructor(
     private val geminiNanoCompatibilityChecker: GeminiNanoCompatibilityChecker
 ) : ViewModel() {
 
-    private val _models = MutableStateFlow<List<ModelInfo>>(emptyList())
-    val models: StateFlow<List<ModelInfo>> = _models.asStateFlow()
-
     private val _selectedProvider = MutableStateFlow(LLMProvider.LITE_RT)
     val selectedProvider: StateFlow<LLMProvider> = _selectedProvider.asStateFlow()
 
     private val _geminiNanoCompatibility = MutableStateFlow<DeviceCompatibility?>(null)
-    val geminiNanoCompatibility: StateFlow<DeviceCompatibility?> =
-        _geminiNanoCompatibility.asStateFlow()
 
     private val _availableProviders = MutableStateFlow<List<LLMProvider>>(LLMProvider.entries)
-    val availableProviders: StateFlow<List<LLMProvider>> = _availableProviders.asStateFlow()
 
     private val _isGpuEnabled = MutableStateFlow(false)
     val isGpuEnabled: StateFlow<Boolean> = _isGpuEnabled.asStateFlow()
@@ -45,10 +38,7 @@ class SettingsViewModel @Inject constructor(
         // 起動時にassetsからモデルをコピー
         viewModelScope.launch {
             modelManager.copyModelsFromAssets()
-            refreshModels()
         }
-
-        refreshModels()
 
         // Gemini Nanoの対応状況を確認
         viewModelScope.launch {
@@ -95,10 +85,35 @@ class SettingsViewModel @Inject constructor(
                 isFirst = false
             }
         }
-    }
 
-    fun refreshModels() {
-        _models.value = modelManager.getAvailableModels()
+        // Llamaモデル選択を監視し、変更時にLLAMA_CPPプロバイダーを再初期化
+        viewModelScope.launch {
+            var isFirst = true
+            settingsRepository.selectedLlamaModel.collect { selectedModelId ->
+                // 初回以外で、現在LLAMA_CPPが選択されている場合に再初期化
+                if (!isFirst && _selectedProvider.value == LLMProvider.LLAMA_CPP) {
+                    android.util.Log.d(
+                        "SettingsViewModel",
+                        "Llama model selection changed to: $selectedModelId, reinitializing LlamaCppRepository..."
+                    )
+                    try {
+                        llmManager.reinitializeCurrentProvider()
+                        android.util.Log.d(
+                            "SettingsViewModel",
+                            "LlamaCppRepository successfully reinitialized with selected model: $selectedModelId"
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e(
+                            "SettingsViewModel",
+                            "Critical error during LlamaCppRepository reinitialization",
+                            e
+                        )
+                        // ユーザーに問題を通知することも検討
+                    }
+                }
+                isFirst = false
+            }
+        }
     }
 
     fun selectProvider(provider: LLMProvider) {
@@ -110,18 +125,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             // 永続化のみを行い、反映はフロー監視で一元化
             settingsRepository.setCurrentProvider(provider)
-        }
-    }
-
-    fun deleteModel(modelId: String) {
-        viewModelScope.launch {
-            val result = modelManager.deleteModel(modelId)
-            result.onSuccess {
-                refreshModels()
-            }.onFailure { exception ->
-                // Handle deletion failure
-                exception.printStackTrace()
-            }
         }
     }
 

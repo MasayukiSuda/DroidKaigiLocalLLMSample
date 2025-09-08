@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.daasuu.llmsample.data.model.LLMProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,6 +25,7 @@ class SettingsRepositoryImpl @Inject constructor(
     private object Keys {
         val CURRENT_PROVIDER = intPreferencesKey("current_provider")
         val GPU_ENABLED = booleanPreferencesKey("gpu_enabled")
+        val SELECTED_LLAMA_MODEL = stringPreferencesKey("selected_llama_model")
     }
 
     override val currentProvider: Flow<LLMProvider> =
@@ -37,6 +39,11 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[Keys.GPU_ENABLED] ?: false
         }
 
+    override val selectedLlamaModel: Flow<String?> =
+        context.dataStore.data.map { prefs ->
+            prefs[Keys.SELECTED_LLAMA_MODEL]
+        }
+
     override suspend fun setCurrentProvider(provider: LLMProvider) {
         context.dataStore.edit { prefs ->
             prefs[Keys.CURRENT_PROVIDER] = provider.ordinal
@@ -46,6 +53,16 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setGpuEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.GPU_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setSelectedLlamaModel(modelId: String?) {
+        context.dataStore.edit { prefs ->
+            if (modelId != null) {
+                prefs[Keys.SELECTED_LLAMA_MODEL] = modelId
+            } else {
+                prefs.remove(Keys.SELECTED_LLAMA_MODEL)
+            }
         }
     }
 }
