@@ -2,8 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt")
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.android.hilt)
+    alias(libs.plugins.kotlin.ksp)
 }
 
 android {
@@ -30,11 +30,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -55,38 +55,38 @@ dependencies {
     implementation(libs.androidx.material3)
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation(libs.androidx.navigation.compose)
 
     // Hilt for DI
-    implementation("com.google.dagger:hilt-android:2.48")
-    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.foundation.layout)
-    kapt("com.google.dagger:hilt-compiler:2.48")
+    ksp(libs.hilt.compiler)
 
     // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation(libs.kotlinx.coroutines.android)
 
     // Material Icons Extended
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+    implementation(libs.androidx.material.icons.extended)
 
     // HTTP Client for model downloads
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(libs.okhttp)
+    implementation(libs.logging.interceptor)
 
     // DataStore (Preferences)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation(libs.androidx.datastore.preferences)
 
     // MediaPipe Tasks Inference API
-    implementation("com.google.mediapipe:tasks-genai:0.10.27")
+    implementation(libs.tasks.genai)
 
     // Google AI Edge SDK for Gemini Nano experimental access
-    implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
+    implementation(libs.aicore)
 
     // Timber for logging
-    implementation("com.jakewharton.timber:timber:5.0.1")
+    implementation(libs.timber)
 
 
     testImplementation(libs.junit)
