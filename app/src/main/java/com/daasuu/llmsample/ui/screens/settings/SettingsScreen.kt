@@ -1,6 +1,5 @@
 package com.daasuu.llmsample.ui.screens.settings
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -292,18 +291,4 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         )
     }
-}
-
-@SuppressLint("DefaultLocale")
-private fun formatFileSize(bytes: Long): String {
-    val units = arrayOf("B", "KB", "MB", "GB", "TB")
-    var size = bytes.toFloat()
-    var unitIndex = 0
-
-    while (size >= 1024 && unitIndex < units.size - 1) {
-        size /= 1024
-        unitIndex++
-    }
-
-    return String.format("%.1f %s", size, units[unitIndex])
 }
