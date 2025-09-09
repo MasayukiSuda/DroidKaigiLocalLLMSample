@@ -4,8 +4,8 @@ import android.llama.cpp.LLamaAndroid
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
 import timber.log.Timber
 import com.daasuu.llmsample.data.model_manager.ModelManager
+import com.daasuu.llmsample.data.preferences.PreferencesManager
 import com.daasuu.llmsample.data.prompts.CommonPrompts
-import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -20,7 +20,7 @@ import javax.inject.Singleton
 class LlamaCppRepository @Inject constructor(
     private val modelManager: ModelManager,
     private val llamaAndroid: LLamaAndroid,
-    private val settingsRepository: SettingsRepository,
+    private val preferencesManager: PreferencesManager,
 ) : LLMRepository {
 
     private var isInitialized = false
@@ -33,7 +33,7 @@ class LlamaCppRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             try {
                 // Get user-selected model preference
-                val selectedModelId = settingsRepository.selectedLlamaModel.first()
+                val selectedModelId = preferencesManager.selectedLlamaModel.first()
 
                 // Get all downloaded models
                 val downloadedModels = modelManager.getAvailableModels()

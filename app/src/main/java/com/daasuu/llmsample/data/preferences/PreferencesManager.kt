@@ -1,4 +1,4 @@
-package com.daasuu.llmsample.data.settings
+package com.daasuu.llmsample.data.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -18,45 +18,44 @@ import javax.inject.Singleton
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "llm_settings")
 
 @Singleton
-class SettingsRepositoryImpl @Inject constructor(
+class PreferencesManager @Inject constructor(
     @ApplicationContext private val context: Context
-) : SettingsRepository {
-
+) {
     private object Keys {
         val CURRENT_PROVIDER = intPreferencesKey("current_provider")
         val GPU_ENABLED = booleanPreferencesKey("gpu_enabled")
         val SELECTED_LLAMA_MODEL = stringPreferencesKey("selected_llama_model")
     }
 
-    override val currentProvider: Flow<LLMProvider> =
+    val currentProvider: Flow<LLMProvider> =
         context.dataStore.data.map { prefs ->
             val ordinal = prefs[Keys.CURRENT_PROVIDER] ?: LLMProvider.LITE_RT.ordinal
             LLMProvider.entries.getOrNull(ordinal) ?: LLMProvider.LITE_RT
         }
 
-    override val isGpuEnabled: Flow<Boolean> =
-        context.dataStore.data.map { prefs ->
-            prefs[Keys.GPU_ENABLED] ?: false
-        }
-
-    override val selectedLlamaModel: Flow<String?> =
-        context.dataStore.data.map { prefs ->
-            prefs[Keys.SELECTED_LLAMA_MODEL]
-        }
-
-    override suspend fun setCurrentProvider(provider: LLMProvider) {
+    suspend fun setCurrentProvider(provider: LLMProvider) {
         context.dataStore.edit { prefs ->
             prefs[Keys.CURRENT_PROVIDER] = provider.ordinal
         }
     }
 
-    override suspend fun setGpuEnabled(enabled: Boolean) {
+    val isGpuEnabled: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[Keys.GPU_ENABLED] ?: false
+        }
+
+    val selectedLlamaModel: Flow<String?> =
+        context.dataStore.data.map { prefs ->
+            prefs[Keys.SELECTED_LLAMA_MODEL]
+        }
+
+    suspend fun setGpuEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.GPU_ENABLED] = enabled
         }
     }
 
-    override suspend fun setSelectedLlamaModel(modelId: String?) {
+    suspend fun setSelectedLlamaModel(modelId: String?) {
         context.dataStore.edit { prefs ->
             if (modelId != null) {
                 prefs[Keys.SELECTED_LLAMA_MODEL] = modelId
@@ -66,5 +65,4 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 }
-
 

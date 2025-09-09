@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.ModelInfo
 import com.daasuu.llmsample.data.model_manager.ModelManager
-import com.daasuu.llmsample.data.settings.SettingsRepository
+import com.daasuu.llmsample.data.preferences.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ModelSelectionViewModel @Inject constructor(
     private val modelManager: ModelManager,
-    private val settingsRepository: SettingsRepository
+    private val preferencesManager: PreferencesManager,
 ) : ViewModel() {
 
     private val _availableModels = MutableStateFlow<List<ModelInfo>>(emptyList())
@@ -30,7 +30,7 @@ class ModelSelectionViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             // 設定から現在選択されているモデルを読み込み
-            settingsRepository.selectedLlamaModel.collect { modelId ->
+            preferencesManager.selectedLlamaModel.collect { modelId ->
                 _selectedModel.value = modelId
             }
         }
@@ -55,7 +55,7 @@ class ModelSelectionViewModel @Inject constructor(
 
     fun selectModel(modelId: String?) {
         viewModelScope.launch {
-            settingsRepository.setSelectedLlamaModel(modelId)
+            preferencesManager.setSelectedLlamaModel(modelId)
         }
     }
 

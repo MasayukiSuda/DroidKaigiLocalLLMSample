@@ -3,7 +3,7 @@ package com.daasuu.llmsample.ui.screens.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.daasuu.llmsample.data.model.ChatMessage
-import com.daasuu.llmsample.data.settings.SettingsRepository
+import com.daasuu.llmsample.data.preferences.PreferencesManager
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val llmManager: LLMManager,
-    private val settingsRepository: SettingsRepository,
+    private val preferencesManager: PreferencesManager,
     private val interferenceMonitor: com.daasuu.llmsample.data.benchmark.InterferenceMonitor
 ) : ViewModel() {
 
@@ -36,7 +36,7 @@ class ChatViewModel @Inject constructor(
     init {
         // 永続化された選択に基づいて初期化・切替を行う
         viewModelScope.launch {
-            settingsRepository.currentProvider.collect { provider ->
+            preferencesManager.currentProvider.collect { provider ->
                 llmManager.setCurrentProvider(provider)
             }
         }

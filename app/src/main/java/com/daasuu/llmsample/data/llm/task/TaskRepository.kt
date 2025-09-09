@@ -2,8 +2,8 @@ package com.daasuu.llmsample.data.llm.task
 
 import android.content.Context
 import com.daasuu.llmsample.data.benchmark.BenchmarkMode
+import com.daasuu.llmsample.data.preferences.PreferencesManager
 import com.daasuu.llmsample.data.prompts.CommonPrompts
-import com.daasuu.llmsample.data.settings.SettingsRepository
 import com.daasuu.llmsample.domain.LLMRepository
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.google.mediapipe.tasks.genai.llminference.ProgressListener
@@ -23,7 +23,7 @@ import javax.inject.Singleton
 @Singleton
 class TaskRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository,
+    private val preferencesManager: PreferencesManager,
 ) : LLMRepository {
 
     private val TAG = "TaskGenAI"
@@ -259,7 +259,7 @@ class TaskRepository @Inject constructor(
         Timber.d("Model path: $modelPath")
 
         try {
-            val isGpuEnabled = settingsRepository.isGpuEnabled.first()
+            val isGpuEnabled = preferencesManager.isGpuEnabled.first()
             val baseOptionsBuilder = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelPath)
                 .setPreferredBackend(if (isGpuEnabled) LlmInference.Backend.GPU else LlmInference.Backend.CPU)

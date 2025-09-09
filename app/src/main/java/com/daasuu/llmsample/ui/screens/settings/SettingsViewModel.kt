@@ -6,21 +6,21 @@ import com.daasuu.llmsample.data.llm.gemini.DeviceCompatibility
 import com.daasuu.llmsample.data.llm.gemini.GeminiNanoCompatibilityChecker
 import com.daasuu.llmsample.data.model.LLMProvider
 import com.daasuu.llmsample.data.model_manager.ModelManager
-import com.daasuu.llmsample.data.settings.SettingsRepository
+import com.daasuu.llmsample.data.preferences.PreferencesManager
 import com.daasuu.llmsample.domain.LLMManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import timber.log.Timber
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val modelManager: ModelManager,
     private val llmManager: LLMManager,
-    private val settingsRepository: SettingsRepository,
+    private val preferencesManager: PreferencesManager,
     private val interferenceMonitor: com.daasuu.llmsample.data.benchmark.InterferenceMonitor,
     private val geminiNanoCompatibilityChecker: GeminiNanoCompatibilityChecker
 ) : ViewModel() {
@@ -48,7 +48,7 @@ class SettingsViewModel @Inject constructor(
 
         // 永続化されたプロバイダーを監視し、UIおよび LLM を同期
         viewModelScope.launch {
-            settingsRepository.currentProvider.collect { provider ->
+            preferencesManager.currentProvider.collect { provider ->
                 _selectedProvider.value = provider
                 llmManager.setCurrentProvider(provider)
             }
@@ -57,7 +57,7 @@ class SettingsViewModel @Inject constructor(
         // GPU設定を監視し、変更時にLITE_RTプロバイダーを再初期化
         viewModelScope.launch {
             var isFirst = true
-            settingsRepository.isGpuEnabled.collect { enabled ->
+            preferencesManager.isGpuEnabled.collect { enabled ->
                 val previousValue = _isGpuEnabled.value
                 _isGpuEnabled.value = enabled
 
@@ -80,7 +80,7 @@ class SettingsViewModel @Inject constructor(
         // Llamaモデル選択を監視し、変更時にLLAMA_CPPプロバイダーを再初期化
         viewModelScope.launch {
             var isFirst = true
-            settingsRepository.selectedLlamaModel.collect { selectedModelId ->
+            preferencesManager.selectedLlamaModel.collect { selectedModelId ->
                 // 初回以外で、現在LLAMA_CPPが選択されている場合に再初期化
                 if (!isFirst && _selectedProvider.value == LLMProvider.LLAMA_CPP) {
                     Timber.d("Llama model selection changed to: $selectedModelId, reinitializing LlamaCppRepository...")
@@ -105,7 +105,7 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             // 永続化のみを行い、反映はフロー監視で一元化
-            settingsRepository.setCurrentProvider(provider)
+            preferencesManager.setCurrentProvider(provider)
         }
     }
 
@@ -151,7 +151,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setGpuEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setGpuEnabled(enabled)
+            preferencesManager.setGpuEnabled(enabled)
         }
     }
 }
