@@ -11,23 +11,6 @@
 3. 使用したいモデルの「ダウンロード」ボタンをタップ
 4. ダウンロードが完了するまで待機（進捗バーが表示されます）
 
-### 利用可能なモデル
-
-以下のモデルがダウンロード可能です：
-
-1. **Llama 3.2 3B Instruct Q4_K_M**（推奨）
-   - サイズ: 約2.3GB
-   - 用途: 高品質と端末負荷のバランスが良い
-   - ダウンロード元（参考）: [Hugging Face (bartowski)](https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf)
-
-2. **TinyLlama 1.1B Q4**（軽量モデル）
-   - サイズ: 約640MB
-   - 用途: 軽量で高速な推論、テスト用
-
-3. **Phi-2 Q4**
-   - サイズ: 約1.5GB
-   - 用途: Microsoft製の中規模モデル
-
 ### 注意事項
 
 - モデルファイルは大容量のため、Wi-Fi環境でのダウンロードを推奨します
@@ -53,13 +36,6 @@ Gemini Nanoを有効にするには以下の設定が必要です：
 1. aicore-experimental Google グループに参加します。
 
 2. Android AICore テスト プログラムにオプトインする
-
-
-### 実装について
-
-- 現在の実装は実験的なものです
-- AICore サービスへの直接アクセスを試行します
-- 非対応端末では自動的に無効化されます
 
 ## Session Proposal
 ```
