@@ -46,6 +46,19 @@ android {
             excludes += "META-INF/LICENSE-notice.md"
         }
     }
+    testOptions {
+        managedDevices {
+            allDevices {
+                create("pixel7Api34", com.android.build.api.dsl.ManagedVirtualDevice::class) {
+                    device = "Pixel 7"
+                    apiLevel = 34
+                    systemImageSource = "google-atd" // or "google"
+                    // optional:
+                    // abi = "arm64-v8a"
+                }
+            }
+        }
+    }
 }
 
 dependencies {

@@ -80,6 +80,8 @@ jobs:
 
   android-test:
     runs-on: macos-14
+    env:
+      MD_DEVICE_TASK: ":app:pixel7Api34DebugAndroidTest"
 
     steps:
       - uses: actions/checkout@v4
@@ -126,43 +128,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-v3-
 
-      - name: AVD cache
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-api34-arm64
+      - name: Verify Android SDK tools
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          sdkmanager --version || true
+          avdmanager --help || true
 
-      - name: Create AVD and generate snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: arm64-v8a
-          profile: pixel_7
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096 -partition-size 2048
-          disable-animations: false
-          emulator-boot-timeout: 900
-          script: echo "Generated AVD snapshot for caching."
+      - name: List Managed Device test tasks
+        run: |
+          ./gradlew :app:tasks --all | grep -E "DebugAndroidTest|Managed|Device" || true
 
-      - name: Run Android instrumented tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: arm64-v8a
-          profile: pixel_7
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096 -partition-size 2048
-          disable-animations: true
-          emulator-boot-timeout: 900
-          script: |
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\''\r'\'') ]]; do sleep 1; done; input keyevent 82'
-            ./gradlew connectedDebugAndroidTest
+      - name: Run instrumentation tests (Gradle Managed Devices)
+        run: |
+          echo "Running $MD_DEVICE_TASK"
+          ./gradlew --stacktrace --info -Pandroid.experimental.testOptions.managedDevices.emulator.gpu=swiftshader_indirect $MD_DEVICE_TASK
 
       - name: Upload Android test results
         uses: actions/upload-artifact@v4
