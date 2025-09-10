@@ -22,14 +22,28 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Ensure Gradle wrapper uses correct version
+    - name: Force Gradle 8.13 and clear cache
       run: |
-        echo "Current Gradle wrapper version:"
+        echo "=== Before update ==="
         grep "distributionUrl" gradle/wrapper/gradle-wrapper.properties
-        # Force update to Gradle 8.13 if not already set
+        ./gradlew --version || true
+        
+        echo "=== Clearing Gradle cache ==="
+        rm -rf ~/.gradle/caches || true
+        rm -rf ~/.gradle/wrapper || true
+        rm -rf .gradle || true
+        
+        echo "=== Updating to Gradle 8.13 ==="
         sed -i.bak 's|gradle-.*-bin\.zip|gradle-8.13-bin.zip|' gradle/wrapper/gradle-wrapper.properties
-        echo "Updated Gradle wrapper version:"
+        
+        echo "=== After update ==="
         grep "distributionUrl" gradle/wrapper/gradle-wrapper.properties
+        
+        echo "=== Downloading fresh Gradle ==="
+        ./gradlew --version
+        
+        echo "=== Verifying Gradle version ==="
+        ./gradlew --version | grep "Gradle 8.13" || (echo "ERROR: Gradle 8.13 not detected" && exit 1)
 
     - name: Cache Gradle packages
       uses: actions/cache@v4
@@ -37,9 +51,9 @@ jobs:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-v2-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+        key: ${{ runner.os }}-gradle-v3-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
         restore-keys: |
-          ${{ runner.os }}-gradle-v2-
+          ${{ runner.os }}-gradle-v3-
 
     - name: Validate Gradle wrapper
       uses: gradle/wrapper-validation-action@v2
@@ -79,14 +93,28 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Ensure Gradle wrapper uses correct version
+    - name: Force Gradle 8.13 and clear cache
       run: |
-        echo "Current Gradle wrapper version:"
+        echo "=== Before update ==="
         grep "distributionUrl" gradle/wrapper/gradle-wrapper.properties
-        # Force update to Gradle 8.13 if not already set
+        ./gradlew --version || true
+        
+        echo "=== Clearing Gradle cache ==="
+        rm -rf ~/.gradle/caches || true
+        rm -rf ~/.gradle/wrapper || true
+        rm -rf .gradle || true
+        
+        echo "=== Updating to Gradle 8.13 ==="
         sed -i.bak 's|gradle-.*-bin\.zip|gradle-8.13-bin.zip|' gradle/wrapper/gradle-wrapper.properties
-        echo "Updated Gradle wrapper version:"
+        
+        echo "=== After update ==="
         grep "distributionUrl" gradle/wrapper/gradle-wrapper.properties
+        
+        echo "=== Downloading fresh Gradle ==="
+        ./gradlew --version
+        
+        echo "=== Verifying Gradle version ==="
+        ./gradlew --version | grep "Gradle 8.13" || (echo "ERROR: Gradle 8.13 not detected" && exit 1)
 
     - name: Cache Gradle packages
       uses: actions/cache@v4
@@ -94,9 +122,9 @@ jobs:
         path: |
           ~/.gradle/caches
           ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-v2-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+        key: ${{ runner.os }}-gradle-v3-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
         restore-keys: |
-          ${{ runner.os }}-gradle-v2-
+          ${{ runner.os }}-gradle-v3-
 
     - name: Run lint
       run: ./gradlew lintDebug
