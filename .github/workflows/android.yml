@@ -166,10 +166,10 @@ jobs:
             "platform-tools" \
             "platforms;android-34" \
             "emulator" \
-            "system-images;android-34;google;arm64-v8a"
+            "system-images;android-34;google_atd;arm64-v8a"
 
           # List to verify (non-fatal)
-          "$SDKM" --list | grep -E "android-34|google_atd|emulator" || true
+          "$SDKM" --list | grep -E "android-34|google_atd|google_apis|emulator" || true
 
       - name: Run instrumentation tests (Gradle Managed Devices)
         run: |
