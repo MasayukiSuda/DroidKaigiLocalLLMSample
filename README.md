@@ -1,22 +1,8 @@
 # DroidKaigi Local LLM Sample
 
-## モデルファイルの配置方法
+## Modelのsetup方法について
 
-このアプリでは、LLMモデルファイルをアプリ内からダウンロードできます。
-
-### モデルのダウンロード方法
-
-1. アプリを起動
-2. 画面上部のダウンロードアイコン（↓）をタップして「モデル管理」画面を開く
-3. 使用したいモデルの「ダウンロード」ボタンをタップ
-4. ダウンロードが完了するまで待機（進捗バーが表示されます）
-
-### 注意事項
-
-- モデルファイルは大容量のため、Wi-Fi環境でのダウンロードを推奨します
-- ダウンロードしたモデルはアプリの内部ストレージに保存されます
-- ストレージ容量に注意してください（Llama 3.2で約2.3GB、TinyLlamaで約640MB など）
-- アプリをアンインストールするとダウンロードしたモデルも削除されます
+[こちら](https://github.com/MasayukiSuda/DroidKaigiLocalLLMSample/blob/main/MODEL_SETUP.md)を最初にご確認ください。
 
 ## Gemini Nano利用について
 
@@ -33,9 +19,9 @@ Gemini Nanoは以下の端末でのみ利用可能です：
 
 Gemini Nanoを有効にするには以下の設定が必要です：
 
-1. aicore-experimental Google グループに参加します。
+1. [aicore-experimental Google グループ](https://groups.google.com/g/aicore-experimental?hl=ja)に参加します。
 
-2. Android AICore テスト プログラムにオプトインする
+2. [Android AICore テスト プログラム](https://play.google.com/apps/testing/com.google.android.aicore?hl=ja)にオプトインする
 
 ## Session Proposal
 ```
@@ -75,5 +61,4 @@ Gemini Nano のオンデバイス高性能とプライバシー保護、llama.cp
 ### 使用上の注意
 
 - 本サンプルは教育・学習目的で作成されています
-- 商用利用時は各ライブラリのライセンス条項を遵守してください
 - モデルファイルについては、それぞれの提供元のライセンスに従ってください
