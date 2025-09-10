@@ -137,17 +137,39 @@ jobs:
       - name: List Managed Device test tasks
         run: |
           ./gradlew :app:tasks --all | grep -E "DebugAndroidTest|Managed|Device" || true
-  
+
       - name: Accept Android SDK licenses & install components (for Managed Devices)
         run: |
           set -e
-          export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          yes | sdkmanager --licenses
-          yes | sdkmanager --install \
+          export ANDROID_SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+
+          # Resolve sdkmanager path explicitly (PATH may not include it on macOS runners)
+          CANDIDATES=(
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"
+            "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"
+            "/usr/local/lib/android/sdk/cmdline-tools/bin/sdkmanager"
+          )
+          for c in "${CANDIDATES[@]}"; do
+            if [ -x "$c" ]; then SDKM="$c"; break; fi
+          done
+          if [ -z "${SDKM:-}" ]; then
+            echo "sdkmanager not found. Ensure cmdline-tools are installed on the runner." >&2
+            echo "Checked: ${CANDIDATES[*]}" >&2
+            exit 1
+          fi
+
+          echo "Using sdkmanager: $SDKM"
+
+          yes | "$SDKM" --licenses
+          yes | "$SDKM" --install \
             "platform-tools" \
             "platforms;android-34" \
             "emulator" \
-            "system-images;android-34;google_atd;arm64-v8a"
+            "system-images;android-34;google;arm64-v8a"
+
+          # List to verify (non-fatal)
+          "$SDKM" --list | grep -E "android-34|google_atd|emulator" || true
 
       - name: Run instrumentation tests (Gradle Managed Devices)
         run: |

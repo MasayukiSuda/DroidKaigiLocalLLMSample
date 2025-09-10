@@ -52,7 +52,7 @@ android {
                 create("pixel7Api34", com.android.build.api.dsl.ManagedVirtualDevice::class) {
                     device = "Pixel 7"
                     apiLevel = 34
-                    systemImageSource = "google-atd" // or "google"
+                    systemImageSource = "google"
                     // optional:
                     // abi = "arm64-v8a"
                 }
