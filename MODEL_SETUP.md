@@ -5,8 +5,7 @@ Media LLM Inference APIと、Llama.cppはモデルファイルのセットアッ
 ## Media LLM Inference API
 **配置手順:**
 - `app/src/main/assets/models/lite_rt/gemma3/` に Gemma3 の `.task` ファイルを配置
-  - https://ai.google.dev/gemma/docs/core?hl=ja
-  - 上記のサイトから希望のGemma3を見つけてダウンロードしてください。
+  - Hugging FaceでLogin後、[こちら](https://huggingface.co/litert-community/Gemma3-1B-IT/tree/main)からgemma3-1b-it-int4.taskを見つけてダウンロードしてください。
 - アプリ初回起動時に `files/models/lite_rt/gemma3/` へコピーされ、そこからロードされます
 
 ## Llama.cpp
@@ -18,6 +17,12 @@ Media LLM Inference APIと、Llama.cppはモデルファイルのセットアッ
 4. ダウンロード完了を待つ
 5. 設定画面に戻り、モデル選択ページを開く
 6. 希望のモデルを選択
+
+
+https://github.com/user-attachments/assets/f2eef1f1-ee62-4873-877e-bc3a121a38d9
+
+
+
 
 ### 2. 手動でのモデル配置（上級者向け）
 
