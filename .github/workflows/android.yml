@@ -155,6 +155,10 @@ jobs:
         run: |
           ./gradlew :app:tasks --all | grep -E "DebugAndroidTest|Managed|Device" || true
 
+      - name: Clean unused Managed Devices (best-effort)
+        run: |
+          ./gradlew :app:cleanManagedDevices --unused-only || true
+
       - name: Accept Android SDK licenses & install components (for Managed Devices)
         run: |
           set -e
@@ -191,7 +195,10 @@ jobs:
       - name: Run instrumentation tests (Gradle Managed Devices)
         run: |
           echo "Running $MD_DEVICE_TASK"
-          ./gradlew --stacktrace --info -Pandroid.experimental.testOptions.managedDevices.emulator.gpu=swiftshader_indirect $MD_DEVICE_TASK
+          ./gradlew --stacktrace --info \
+            -Pandroid.experimental.testOptions.managedDevices.emulator.gpu=swiftshader_indirect \
+            -Pandroid.experimental.testOptions.managedDevices.emulator.additionalParameters="-no-snapshot -no-snapshot-save -no-boot-anim -noaudio -no-window" \
+            $MD_DEVICE_TASK
 
       - name: Upload Android test results
         uses: actions/upload-artifact@v4
