@@ -81,7 +81,7 @@ jobs:
   android-test:
     runs-on: macos-14
     env:
-      MD_DEVICE_TASK: ":app:pixel7Api34DebugAndroidTest"
+      MD_DEVICE_TASK: ":app:pixel7Api35DebugAndroidTest"
 
     steps:
       - uses: actions/checkout@v4
@@ -133,17 +133,17 @@ jobs:
         with:
           path: |
             ${{ env.ANDROID_HOME }}/platform-tools
-            ${{ env.ANDROID_HOME }}/platforms/android-34
+            ${{ env.ANDROID_HOME }}/platforms/android-35
             ${{ env.ANDROID_HOME }}/emulator
             ${{ env.ANDROID_HOME }}/cmdline-tools
-          key: ${{ runner.os }}-androidsdk-v1-34
+          key: ${{ runner.os }}-androidsdk-v2-35
 
-      - name: Cache Android system image (API 34 google_atd arm64)
+      - name: Cache Android system image (API 35 google_apis arm64)
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.ANDROID_HOME }}/system-images/android-34/google_atd/arm64-v8a
-          key: ${{ runner.os }}-sysimg-v1-android34-google_atd-arm64
+            ${{ env.ANDROID_HOME }}/system-images/android-35/google_apis/arm64-v8a
+          key: ${{ runner.os }}-sysimg-v2-android35-google_apis-arm64
 
       - name: Verify Android SDK tools
         run: |
@@ -181,12 +181,12 @@ jobs:
           yes | "$SDKM" --licenses
           yes | "$SDKM" --install \
             "platform-tools" \
-            "platforms;android-34" \
+            "platforms;android-35" \
             "emulator" \
-            "system-images;android-34;google_atd;arm64-v8a"
+            "system-images;android-35;google_apis;arm64-v8a"
 
           # List to verify (non-fatal)
-          "$SDKM" --list | grep -E "android-34|google_atd|google_apis|emulator" || true
+          "$SDKM" --list | grep -E "android-35|google_apis|emulator" || true
 
       - name: Run instrumentation tests (Gradle Managed Devices)
         run: |

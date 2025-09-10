@@ -49,9 +49,9 @@ android {
     testOptions {
         managedDevices {
             allDevices {
-                create("pixel7Api34", com.android.build.api.dsl.ManagedVirtualDevice::class) {
+                create("pixel7Api35", com.android.build.api.dsl.ManagedVirtualDevice::class) {
                     device = "Pixel 7"
-                    apiLevel = 34
+                    apiLevel = 35
                     systemImageSource = "google"
                     // optional:
                     // abi = "arm64-v8a"
