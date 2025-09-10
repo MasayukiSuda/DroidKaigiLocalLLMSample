@@ -137,6 +137,17 @@ jobs:
       - name: List Managed Device test tasks
         run: |
           ./gradlew :app:tasks --all | grep -E "DebugAndroidTest|Managed|Device" || true
+  
+      - name: Accept Android SDK licenses & install components (for Managed Devices)
+        run: |
+          set -e
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          yes | sdkmanager --licenses
+          yes | sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-34" \
+            "emulator" \
+            "system-images;android-34;google_atd;arm64-v8a"
 
       - name: Run instrumentation tests (Gradle Managed Devices)
         run: |
