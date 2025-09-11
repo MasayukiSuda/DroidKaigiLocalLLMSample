@@ -362,3 +362,4 @@ class ModelDownloadViewModelTest : TestBase() {
         }
     }
 }
+
