@@ -123,10 +123,10 @@ fun ChatMessageItem(message: ChatMessage) {
     ) {
         Card(
             modifier = Modifier
-                .widthIn(max = 280.dp)
+                .widthIn(max = 328.dp)
                 .padding(
-                    start = if (message.isUser) 48.dp else 0.dp,
-                    end = if (message.isUser) 0.dp else 48.dp
+                    start = if (message.isUser) 16.dp else 0.dp,
+                    end = if (message.isUser) 0.dp else 16.dp
                 ),
             colors = CardDefaults.cardColors(
                 containerColor = if (message.isUser)
