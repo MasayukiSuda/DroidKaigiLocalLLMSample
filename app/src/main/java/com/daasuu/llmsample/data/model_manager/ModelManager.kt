@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.res.AssetManager
 import com.daasuu.llmsample.data.model.ModelInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
-import timber.log.Timber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -28,6 +28,13 @@ class ModelManager @Inject constructor(
             downloadUrl = "https://huggingface.co/mmnga/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-gguf/resolve/main/aixsatoshi-Llama-3-8b-Cosmopedia-japanese-IQ4_XS.gguf?download=true",
             fileSize = 4800000000L, // ~4.8GB (approx)
             description = "LLaMA-3-8B fine-tuned on Japanese data with Cosmopedia dataset"
+        ),
+        ModelInfo(
+            id = MODEL_ID_LLAMA_3_ELYZA_JP_8B_GGUF,
+            name = "Llama-3-ELYZA-JP-8B-GGUF",
+            downloadUrl = "https://huggingface.co/elyza/Llama-3-ELYZA-JP-8B-GGUF/resolve/main/Llama-3-ELYZA-JP-8B-q4_k_m.gguf?download=true",
+            fileSize = 4900000000L, // ~4.9GB (approx)
+            description = "ELYZA's Japanese-tuned LLaMA-3-8B model"
         ),
         ModelInfo(
             id = MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B,
@@ -230,6 +237,11 @@ class ModelManager @Inject constructor(
                     ) -> MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B
 
                     fileName.contains(
+                        "llama-3-elyza",
+                        ignoreCase = true
+                    ) -> MODEL_ID_LLAMA_3_ELYZA_JP_8B_GGUF
+
+                    fileName.contains(
                         "suzume",
                         ignoreCase = true
                     ) && fileName.contains(
@@ -263,6 +275,8 @@ class ModelManager @Inject constructor(
     companion object {
         // Model ID constants
         const val MODEL_ID_LLAMA_3_8B_COSMOPEDIA_JAPANESE = "llama-3-8b-cosmopedia-japanese-q4_k_m"
+
+        const val MODEL_ID_LLAMA_3_ELYZA_JP_8B_GGUF = "Llama-3-ELYZA-JP-8B-q4_k_m"
         const val MODEL_ID_ELYZA_JAPANESE_LLAMA_2_7B = "elyza-japanese-llama-2-7b-fast-q4_k_m"
         const val MODEL_ID_SUZUME_LLAMA_3_8B_JAPANESE = "suzume-llama-3-8B-japanese-GGUF"
         const val MODEL_ID_LLAMA_3_2_3B_INSTRUCT = "llama-3.2-3b-instruct-q4_k_m"
